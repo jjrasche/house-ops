@@ -39,5 +39,5 @@ export function useChat() {
     }
   }, [conversationId])
 
-  return { messages, isSending, sendMessage }
+  return { messages, isSending, sendMessage, conversationId }
 }

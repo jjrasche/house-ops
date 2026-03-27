@@ -11,14 +11,15 @@ interface InventoryItem {
 
 interface InventoryPanelProps {
   householdId: number
+  refreshKey?: number
 }
 
-export function InventoryPanel({ householdId }: InventoryPanelProps) {
+export function InventoryPanel({ householdId, refreshKey }: InventoryPanelProps) {
   const [items, setItems] = useState<InventoryItem[]>([])
 
   useEffect(() => {
-    loadInventory(householdId).then(setItems)
-  }, [householdId])
+    loadInventory(householdId).then(setItems).catch(() => {})
+  }, [householdId, refreshKey])
 
   if (items.length === 0) return <p className="panel__empty">No inventory tracked</p>
 

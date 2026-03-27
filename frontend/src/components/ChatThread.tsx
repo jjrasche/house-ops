@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { ConfirmationCard } from './ConfirmationCard'
 import { executeToolCall } from '../lib/execute-tool-call'
+import { logActionConfirmation } from '../lib/action-log'
 import type { ChatMessage, ProposedAction } from '../lib/types'
 
 interface ChatThreadProps {
   messages: ChatMessage[]
   householdId: number
+  conversationId: number | undefined
+  onToolExecuted?: () => void
 }
 
 type ActionStatus = 'pending' | 'executing' | 'approved' | 'rejected' | 'failed'
 
-export function ChatThread({ messages, householdId }: ChatThreadProps) {
+export function ChatThread({ messages, householdId, conversationId, onToolExecuted }: ChatThreadProps) {
   const [actionStatuses, setActionStatuses] = useState<Record<string, ActionStatus>>({})
 
   async function handleApprove(action: ProposedAction) {
@@ -18,13 +21,16 @@ export function ChatThread({ messages, householdId }: ChatThreadProps) {
     try {
       await executeToolCall(action, householdId)
       setActionStatuses(prev => ({ ...prev, [action.toolCallId]: 'approved' }))
+      await logActionConfirmation(action, true, householdId, conversationId)
+      onToolExecuted?.()
     } catch {
       setActionStatuses(prev => ({ ...prev, [action.toolCallId]: 'failed' }))
     }
   }
 
-  function handleReject(action: ProposedAction) {
+  async function handleReject(action: ProposedAction) {
     setActionStatuses(prev => ({ ...prev, [action.toolCallId]: 'rejected' }))
+    await logActionConfirmation(action, false, householdId, conversationId)
   }
 
   return (

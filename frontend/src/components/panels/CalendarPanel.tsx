@@ -12,14 +12,15 @@ interface CalendarEvent {
 
 interface CalendarPanelProps {
   householdId: number
+  refreshKey?: number
 }
 
-export function CalendarPanel({ householdId }: CalendarPanelProps) {
+export function CalendarPanel({ householdId, refreshKey }: CalendarPanelProps) {
   const [events, setEvents] = useState<CalendarEvent[]>([])
 
   useEffect(() => {
-    loadUpcomingEvents(householdId).then(setEvents)
-  }, [householdId])
+    loadUpcomingEvents(householdId).then(setEvents).catch(() => {})
+  }, [householdId, refreshKey])
 
   if (events.length === 0) return <p className="panel__empty">No upcoming events</p>
 
