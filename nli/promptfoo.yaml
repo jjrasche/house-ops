@@ -1,0 +1,19 @@
+# HouseOps NLI eval suite
+# Run: npx promptfoo eval
+
+description: "HouseOps tool calling accuracy"
+
+prompts:
+  - file://prompt.txt
+
+providers:
+  - id: groq:llama-3.3-70b-versatile
+    config:
+      temperature: 0
+      tools: file://tools.json
+
+tests: file://datasets/*.yaml
+
+defaultTest:
+  options:
+    transformVars: "{ ...vars, date: '2026-03-27' }"

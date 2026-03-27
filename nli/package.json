@@ -1,0 +1,16 @@
+{
+  "name": "house-ops-nli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HouseOps NLI eval suite — Promptfoo tests for tool calling accuracy",
+  "scripts": {
+    "eval": "promptfoo eval",
+    "eval:view": "promptfoo eval && promptfoo view",
+    "export-schemas": "npx tsx export-schemas.ts"
+  },
+  "devDependencies": {
+    "promptfoo": "^0.100.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

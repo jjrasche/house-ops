@@ -1,0 +1,30 @@
+# Inventory tool calling tests
+
+- vars:
+    input: "We have 10 rolls of toilet paper in the hall closet"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'add_inventory_item')"
+    - type: javascript
+      value: >
+        const args = JSON.parse(output[0].function.arguments);
+        args.name.toLowerCase().includes('toilet paper') && args.quantity === 10
+
+- vars:
+    input: "Used one of the garbage bags"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'update_inventory_quantity')"
+    - type: javascript
+      value: "JSON.parse(output[0].function.arguments).delta === -1"
+
+- vars:
+    input: "We restocked the laundry detergent, bought 2 more"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'update_inventory_quantity')"
+    - type: javascript
+      value: "JSON.parse(output[0].function.arguments).delta === 2"

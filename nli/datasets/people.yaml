@@ -1,0 +1,43 @@
+# Person attributes and relationship date tests
+
+- vars:
+    input: "Sophie's shoe size is now 3Y"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'add_person_attribute')"
+    - type: javascript
+      value: >
+        const args = JSON.parse(output[0].function.arguments);
+        args.person?.toLowerCase() === 'sophie' && args.attribute_type?.includes('shoe') && args.value === '3Y'
+
+- vars:
+    input: "Luke is allergic to peanuts"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'add_person_attribute')"
+    - type: javascript
+      value: >
+        const args = JSON.parse(output[0].function.arguments);
+        args.person?.toLowerCase() === 'luke' && args.attribute_type === 'allergy'
+
+- vars:
+    input: "We had date night tonight"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'log_relationship_date')"
+    - type: javascript
+      value: "JSON.parse(output[0].function.arguments).type === 'partner'"
+
+- vars:
+    input: "I took Sophie out for one-on-one time today"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'log_relationship_date')"
+    - type: javascript
+      value: >
+        const args = JSON.parse(output[0].function.arguments);
+        args.type === 'parent_child' && args.person?.toLowerCase() === 'sophie'

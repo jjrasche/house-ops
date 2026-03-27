@@ -1,0 +1,23 @@
+# Recipe and meal planning tool calling tests
+
+- vars:
+    input: "Save a recipe for instant pot chicken tikka masala, takes about 30 minutes"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'create_recipe')"
+    - type: javascript
+      value: >
+        const args = JSON.parse(output[0].function.arguments);
+        args.method === 'instant_pot' && args.prep_time_minutes === 30
+
+- vars:
+    input: "Plan chicken tikka masala for dinner on Wednesday"
+  assert:
+    - type: is-valid-openai-tools-call
+    - type: javascript
+      value: "output.every(c => c.function.name === 'plan_meal')"
+    - type: javascript
+      value: >
+        const args = JSON.parse(output[0].function.arguments);
+        args.meal === 'dinner' && args.recipe_name.toLowerCase().includes('tikka masala')
