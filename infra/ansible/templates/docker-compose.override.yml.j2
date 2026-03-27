@@ -1,0 +1,41 @@
+# Overrides for Supabase self-hosted:
+# - Adds Caddy reverse proxy for automatic HTTPS
+# - Removes analytics (logflare, vector) and imgproxy
+# - Unexposes Kong ports (Caddy handles external traffic)
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./volumes/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - kong
+      - studio
+    networks:
+      - default
+
+  kong:
+    ports: !reset []
+
+  analytics:
+    profiles:
+      - disabled
+
+  vector:
+    profiles:
+      - disabled
+
+  imgproxy:
+    profiles:
+      - disabled
+
+volumes:
+  caddy_data:
+  caddy_config:

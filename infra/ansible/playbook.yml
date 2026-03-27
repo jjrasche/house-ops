@@ -1,0 +1,167 @@
+---
+- name: Deploy HouseOps (Supabase + Caddy)
+  hosts: houseops
+  become: true
+  vars_files:
+    - vars/secrets.yml
+
+  vars:
+    supabase_dir: /opt/supabase
+    houseops_dir: /opt/houseops
+
+  tasks:
+    # ── System setup ──────────────────────────────
+    - name: Update apt cache and upgrade packages
+      apt:
+        update_cache: true
+        upgrade: safe
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - git
+          - python3
+          - python3-pip
+          - postgresql-client
+        state: present
+
+    # ── Docker ────────────────────────────────────
+    - name: Add Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    # ── Supabase clone ────────────────────────────
+    - name: Clone Supabase repo
+      git:
+        repo: https://github.com/supabase/supabase.git
+        dest: "{{ supabase_dir }}"
+        depth: 1
+        version: master
+        force: true
+
+    # ── Configuration ─────────────────────────────
+    - name: Template .env file
+      template:
+        src: templates/env.j2
+        dest: "{{ supabase_dir }}/docker/.env"
+        mode: "0600"
+
+    - name: Template docker-compose.override.yml
+      template:
+        src: templates/docker-compose.override.yml.j2
+        dest: "{{ supabase_dir }}/docker/docker-compose.override.yml"
+        mode: "0644"
+
+    - name: Create Caddy volumes directory
+      file:
+        path: "{{ supabase_dir }}/docker/volumes/caddy"
+        state: directory
+        mode: "0755"
+
+    - name: Template Caddyfile
+      template:
+        src: templates/Caddyfile.j2
+        dest: "{{ supabase_dir }}/docker/volumes/caddy/Caddyfile"
+        mode: "0644"
+
+    # ── Deploy ────────────────────────────────────
+    - name: Pull Supabase images
+      community.docker.docker_compose_v2:
+        project_src: "{{ supabase_dir }}/docker"
+        state: present
+        pull: always
+
+    - name: Start Supabase stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ supabase_dir }}/docker"
+        state: present
+
+    - name: Wait for Postgres to accept connections
+      wait_for:
+        host: localhost
+        port: 5432
+        delay: 5
+        timeout: 60
+
+    # ── Migrations ────────────────────────────────
+    - name: Create HouseOps migrations directory
+      file:
+        path: "{{ houseops_dir }}/migrations"
+        state: directory
+        mode: "0755"
+
+    - name: Copy migration files
+      copy:
+        src: "{{ playbook_dir }}/../../supabase/migrations/"
+        dest: "{{ houseops_dir }}/migrations/"
+        mode: "0644"
+
+    - name: Apply initial schema migration
+      shell: |
+        PGPASSWORD="{{ postgres_password }}" psql \
+          -h localhost -p 5432 -U postgres -d postgres \
+          -f "{{ houseops_dir }}/migrations/001_initial_schema.sql"
+      register: migration_result
+      changed_when: "'CREATE' in migration_result.stdout"
+
+    - name: Show migration output
+      debug:
+        var: migration_result.stdout_lines
+      when: migration_result.stdout_lines | length > 0
+
+    # ── Backups ───────────────────────────────────
+    - name: Create backup directory
+      file:
+        path: /opt/backups/houseops
+        state: directory
+        mode: "0700"
+
+    - name: Create daily backup cron job
+      cron:
+        name: "houseops-daily-backup"
+        hour: "3"
+        minute: "0"
+        job: >
+          PGPASSWORD="{{ postgres_password }}"
+          pg_dump -h localhost -p 5432 -U postgres postgres
+          | gzip > /opt/backups/houseops/houseops-$(date +\%Y\%m\%d).sql.gz
+          && find /opt/backups/houseops -name '*.sql.gz' -mtime +30 -delete
+
+    # ── Create household users ────────────────────
+    - name: Wait for auth service
+      uri:
+        url: "http://localhost:8000/auth/v1/health"
+        headers:
+          apikey: "{{ anon_key }}"
+        status_code: 200
+      register: auth_health
+      retries: 12
+      delay: 5
+      until: auth_health.status == 200

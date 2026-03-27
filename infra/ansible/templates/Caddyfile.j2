@@ -1,0 +1,30 @@
+{{ domain }} {
+    handle /rest/v1/* {
+        reverse_proxy kong:8000
+    }
+
+    handle /auth/v1/* {
+        reverse_proxy kong:8000
+    }
+
+    handle /realtime/v1/* {
+        reverse_proxy kong:8000
+    }
+
+    handle /storage/v1/* {
+        reverse_proxy kong:8000
+    }
+
+    handle /functions/v1/* {
+        reverse_proxy kong:8000
+    }
+
+    handle /pg/* {
+        reverse_proxy kong:8000
+    }
+
+    # Studio dashboard
+    handle /* {
+        reverse_proxy studio:3000
+    }
+}
