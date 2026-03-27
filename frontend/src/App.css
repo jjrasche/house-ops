@@ -193,7 +193,40 @@
 
 .action-done { color: var(--success); font-style: italic; }
 .action-rejected { color: var(--text-muted); font-style: italic; }
-.action-failed { color: var(--error); font-style: italic; }
+
+.action-error {
+  background: color-mix(in srgb, var(--error) 15%, var(--surface));
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  max-width: 85%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-error__message {
+  flex: 1;
+  margin: 0;
+  color: var(--error);
+  font-size: 0.85rem;
+}
+
+.btn-retry {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.btn-retry:hover {
+  background: color-mix(in srgb, var(--error) 20%, transparent);
+}
 
 /* Omnibox */
 

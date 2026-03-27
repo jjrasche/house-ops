@@ -13,23 +13,32 @@ interface ChatThreadProps {
 
 type ActionStatus = 'pending' | 'executing' | 'approved' | 'rejected' | 'failed'
 
+interface ActionState {
+  status: ActionStatus
+  errorMessage?: string
+}
+
 export function ChatThread({ messages, householdId, conversationId, onToolExecuted }: ChatThreadProps) {
-  const [actionStatuses, setActionStatuses] = useState<Record<string, ActionStatus>>({})
+  const [actionStates, setActionStates] = useState<Record<string, ActionState>>({})
 
   async function handleApprove(action: ProposedAction) {
-    setActionStatuses(prev => ({ ...prev, [action.toolCallId]: 'executing' }))
+    setActionStates(prev => ({ ...prev, [action.toolCallId]: { status: 'executing' } }))
     try {
       await executeToolCall(action, householdId)
-      setActionStatuses(prev => ({ ...prev, [action.toolCallId]: 'approved' }))
+      setActionStates(prev => ({ ...prev, [action.toolCallId]: { status: 'approved' } }))
       await logActionConfirmation(action, true, householdId, conversationId)
       onToolExecuted?.()
-    } catch {
-      setActionStatuses(prev => ({ ...prev, [action.toolCallId]: 'failed' }))
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setActionStates(prev => ({
+        ...prev,
+        [action.toolCallId]: { status: 'failed', errorMessage },
+      }))
     }
   }
 
   async function handleReject(action: ProposedAction) {
-    setActionStatuses(prev => ({ ...prev, [action.toolCallId]: 'rejected' }))
+    setActionStates(prev => ({ ...prev, [action.toolCallId]: { status: 'rejected' } }))
     await logActionConfirmation(action, false, householdId, conversationId)
   }
 
@@ -39,17 +48,22 @@ export function ChatThread({ messages, householdId, conversationId, onToolExecut
         <div key={index} className={`chat-message chat-message--${message.role}`}>
           {message.content && <p>{message.content}</p>}
           {message.proposedActions?.map(action => {
-            const status = actionStatuses[action.toolCallId] ?? 'pending'
-            if (status === 'approved') return <p key={action.toolCallId} className="action-done">Approved</p>
-            if (status === 'rejected') return <p key={action.toolCallId} className="action-rejected">Rejected</p>
-            if (status === 'failed') return <p key={action.toolCallId} className="action-failed">Failed</p>
+            const state = actionStates[action.toolCallId] ?? { status: 'pending' }
+            if (state.status === 'approved') return <p key={action.toolCallId} className="action-done">Approved</p>
+            if (state.status === 'rejected') return <p key={action.toolCallId} className="action-rejected">Rejected</p>
+            if (state.status === 'failed') return (
+              <div key={action.toolCallId} className="action-error">
+                <p className="action-error__message">Failed: {state.errorMessage}</p>
+                <button className="btn-retry" onClick={() => handleApprove(action)}>Retry</button>
+              </div>
+            )
             return (
               <ConfirmationCard
                 key={action.toolCallId}
                 action={action}
                 onApprove={handleApprove}
                 onReject={handleReject}
-                isExecuting={status === 'executing'}
+                isExecuting={state.status === 'executing'}
               />
             )
           })}
