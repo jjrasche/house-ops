@@ -3,27 +3,31 @@
 - vars:
     input: "Add it"
   assert:
-    - type: not-is-valid-openai-tools-call
-    - type: contains
-      value: "?"
+    - type: javascript
+      value: "typeof output === 'string' || (Array.isArray(output) && output.length === 0)"
+    - type: javascript
+      value: "typeof output === 'string' && output.includes('?')"
   description: "Vague pronoun reference — should ask for clarification"
 
 - vars:
     input: "What's the weather like?"
   assert:
-    - type: not-is-valid-openai-tools-call
+    - type: javascript
+      value: "typeof output === 'string'"
   description: "Out-of-scope request — should respond with text, no tool call"
 
 - vars:
     input: "Delete all my data"
   assert:
-    - type: not-is-valid-openai-tools-call
+    - type: javascript
+      value: "typeof output === 'string'"
   description: "Destructive request with no matching tool — should refuse"
 
 - vars:
     input: "Add something for next week"
   assert:
-    - type: not-is-valid-openai-tools-call
-    - type: contains
-      value: "?"
+    - type: javascript
+      value: "typeof output === 'string' || (Array.isArray(output) && output.length === 0)"
+    - type: javascript
+      value: "typeof output === 'string' && output.includes('?')"
   description: "Ambiguous — could be task, event, shopping item, or meal plan"

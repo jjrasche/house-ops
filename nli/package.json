@@ -9,7 +9,8 @@
     "export-schemas": "npx tsx export-schemas.ts"
   },
   "devDependencies": {
-    "promptfoo": "^0.100.0",
+    "@azure/identity": "^4.13.1",
+    "promptfoo": "^0.106.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
   }

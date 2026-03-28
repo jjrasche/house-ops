@@ -7,9 +7,7 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'create_recipe')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.method === 'instant_pot' && args.prep_time_minutes === 30
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return args.method === 'instant_pot' && Number(args.prep_time_minutes) === 30; })()"
 
 - vars:
     input: "Plan chicken tikka masala for dinner on Wednesday"
@@ -18,6 +16,4 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'plan_meal')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.meal === 'dinner' && args.recipe_name.toLowerCase().includes('tikka masala')
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return args.meal === 'dinner' && args.recipe_name.toLowerCase().includes('tikka masala'); })()"

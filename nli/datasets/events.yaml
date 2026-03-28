@@ -7,9 +7,7 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'add_event')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.person?.toLowerCase() === 'sophie' && args.date?.includes('2026-03-28')
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return args.person?.toLowerCase() === 'sophie' && args.date?.includes('2026-03-28'); })()"
 
 - vars:
     input: "Schedule a date night next Saturday evening"
@@ -18,9 +16,7 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'add_event')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.category === 'relationship' || args.title.toLowerCase().includes('date night')
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return args.category === 'relationship' || args.title.toLowerCase().includes('date night'); })()"
 
 - vars:
     input: "Dentist appointment for Luke on April 5th at 10am"
@@ -29,6 +25,4 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'add_event')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.date?.includes('2026-04-05') && args.person?.toLowerCase() === 'luke'
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return args.date?.includes('2026-04-05') && args.person?.toLowerCase() === 'luke'; })()"

@@ -10,5 +10,8 @@ build/
 .DS_Store
 Thumbs.db
 
+# Generated files
+nli/tools.json
+
 # Ansible secrets (generated, never committed)
 infra/ansible/vars/secrets.yml

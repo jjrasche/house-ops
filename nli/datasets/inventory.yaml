@@ -7,9 +7,7 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'add_inventory_item')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.name.toLowerCase().includes('toilet paper') && args.quantity === 10
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return args.name.toLowerCase().includes('toilet paper') && args.quantity === 10; })()"
 
 - vars:
     input: "Used one of the garbage bags"
@@ -27,4 +25,4 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'update_inventory_quantity')"
     - type: javascript
-      value: "JSON.parse(output[0].function.arguments).delta === 2"
+      value: "Array.isArray(output) && output.length > 0 && JSON.parse(output[0].function.arguments).delta === 2"

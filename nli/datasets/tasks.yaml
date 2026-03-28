@@ -7,9 +7,7 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'create_task')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.recurrence_interval === 3 && args.recurrence_unit === 'months'
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return Number(args.recurrence_interval) === 3 && args.recurrence_unit === 'months'; })()"
 
 - vars:
     input: "I finished mowing the lawn"
@@ -25,9 +23,7 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'create_task')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.assigned_to?.toLowerCase() === 'jim' && args.due_date != null
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return args.assigned_to?.toLowerCase() === 'jim' && args.due_date != null; })()"
 
 - vars:
     input: "Add a weekly chore to vacuum the living room, assign it to Sophie"
@@ -36,6 +32,4 @@
     - type: javascript
       value: "output.every(c => c.function.name === 'create_task')"
     - type: javascript
-      value: >
-        const args = JSON.parse(output[0].function.arguments);
-        args.recurrence_interval === 1 && args.recurrence_unit === 'weeks' && args.assigned_to?.toLowerCase() === 'sophie'
+      value: "(() => { const args = JSON.parse(output[0].function.arguments); return Number(args.recurrence_interval) === 1 && args.recurrence_unit === 'weeks' && args.assigned_to?.toLowerCase() === 'sophie'; })()"

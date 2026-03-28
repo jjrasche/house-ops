@@ -160,7 +160,7 @@ const createTask: ToolSchema = {
         },
         recurrence_interval: {
           type: "number",
-          description: "How often the task repeats (used with recurrence_unit)",
+          description: "How often the task repeats as an integer (e.g. 3, not \"3\"). Used with recurrence_unit.",
         },
         recurrence_unit: {
           type: "string",
