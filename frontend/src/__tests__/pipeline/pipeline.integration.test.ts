@@ -5,19 +5,22 @@ import type {
   ClassifyOutput,
   ValidateOutput,
   PipelineResult,
-  PipelinePath,
   EntityMention,
   EntityType,
   ToolCall,
 } from '../../lib/pipeline/types';
 import { extract } from '../../lib/pipeline/extract';
 import type { LexiconEntry } from '../../lib/pipeline/extract';
+import { resolve } from '../../lib/pipeline/resolve';
+import type { ResolveOptions } from '../../lib/pipeline/resolve';
 import {
   PEOPLE, ITEMS, LOCATIONS, STORES, ACTIVITIES, ACTIONS,
-  resolvedEntity, TEST_HOUSEHOLD_ID,
+  TEST_HOUSEHOLD_ID,
 } from './seed';
+import { createMockSupabase } from './mock-supabase';
+import type { SeedRow } from './mock-supabase';
 
-// --- Real EXTRACT stage, stubs for remaining stages ---
+// --- Real EXTRACT + RESOLVE stages, stubs for CLASSIFY/ASSEMBLE/VALIDATE ---
 
 const LEXICON: LexiconEntry[] = [
   ...Object.values(PEOPLE).map(p => ({ name: p.name, entityType: 'person' as const })),
@@ -29,6 +32,17 @@ const LEXICON: LexiconEntry[] = [
 
 const REFERENCE_DATE = new Date('2026-03-30T12:00:00');
 
+const SEED_ENTITIES: SeedRow[] = [
+  ...Object.values(PEOPLE).map(p => ({ id: p.id, name: p.name, entityType: 'person' })),
+  ...Object.values(ITEMS).map(i => ({ id: i.id, name: i.name, entityType: 'item' })),
+  ...Object.values(LOCATIONS).map(l => ({ id: l.id, name: l.name, entityType: 'location' })),
+  ...Object.values(STORES).map(s => ({ id: s.id, name: s.name, entityType: 'store' })),
+  ...Object.values(ACTIVITIES).map(a => ({ id: a.id, name: a.name, entityType: 'activity' })),
+  ...Object.values(ACTIONS).map(a => ({ id: a.id, name: a.title, entityType: 'action' })),
+];
+
+const RESOLVE_OPTIONS: ResolveOptions = { supabase: createMockSupabase(SEED_ENTITIES) };
+
 function stageExtract(text: string): ExtractOutput {
   return extract(
     { text, householdId: TEST_HOUSEHOLD_ID },
@@ -36,43 +50,11 @@ function stageExtract(text: string): ExtractOutput {
   );
 }
 
-// RESOLVE: exact + fuzzy match against seed
-function stageResolve(mentions: readonly EntityMention[], verb: string): ResolveOutput {
-  const resolved = [];
-  const unresolved = [];
-
-  for (const mention of mentions) {
-    const txt = mention.text.toLowerCase();
-    const match =
-      findExact(txt, PEOPLE, 'person') ??
-      findExact(txt, ITEMS, 'item') ??
-      findExact(txt, LOCATIONS, 'location') ??
-      findExact(txt, STORES, 'store') ??
-      findFuzzy(txt, ACTIVITIES, 'activity') ??
-      findFuzzy(txt, ACTIONS, 'action');
-    if (match) resolved.push(match);
-    else unresolved.push(mention.text);
-  }
-
-  return { resolved, unresolved };
-}
-
-function findExact(text: string, table: Record<string, { id: number; name: string }>, type: EntityType) {
-  for (const row of Object.values(table)) {
-    if (text === row.name.toLowerCase()) return resolvedEntity(text, row.id, type);
-  }
-  return null;
-}
-
-function findFuzzy(text: string, table: Record<string, { id: number } & Record<string, unknown>>, type: EntityType) {
-  for (const row of Object.values(table)) {
-    const name = ('name' in row ? row.name : 'title' in row ? row.title : '') as string;
-    const stem = name.toLowerCase().substring(0, 3);
-    if (stem.length >= 3 && text.includes(stem)) {
-      return resolvedEntity(text, row.id, type, 0.85);
-    }
-  }
-  return null;
+async function stageResolve(mentions: readonly EntityMention[], verb: string): Promise<ResolveOutput> {
+  return resolve(
+    { entityMentions: mentions, householdId: TEST_HOUSEHOLD_ID, verb },
+    RESOLVE_OPTIONS,
+  );
 }
 
 // CLASSIFY: verb + entity types lookup
@@ -178,9 +160,9 @@ function stageValidate(toolCall: ToolCall): ValidateOutput {
 
 // --- Pipeline orchestrator (wires stages) ---
 
-function runPipeline(text: string, householdId: number): PipelineResult {
+async function runPipeline(text: string, householdId: number): Promise<PipelineResult> {
   const extractResult = stageExtract(text);
-  const resolveResult = stageResolve(extractResult.entityMentions, extractResult.verb);
+  const resolveResult = await stageResolve(extractResult.entityMentions, extractResult.verb);
   const classifyResult = stageClassify(extractResult.verb, resolveResult);
 
   if (classifyResult.needsLlm || !classifyResult.toolName) {
@@ -212,8 +194,8 @@ describe('Pipeline integration (wired stages)', () => {
       ['Pick up 3 boxes of cereal from Costco', 'update_item', 1],
       ['I finished mowing the lawn', 'update_action', 1],
       ['Schedule a date night next Saturday evening', 'create_action', 1],
-    ])('"%s" → %s (deterministic, %d call)', (text, expectedTool, callCount) => {
-      const result = runPipeline(text, TEST_HOUSEHOLD_ID);
+    ])('"%s" → %s (deterministic, %d call)', async (text, expectedTool, callCount) => {
+      const result = await runPipeline(text as string, TEST_HOUSEHOLD_ID);
       expect(result.path).toBe('deterministic');
       expect(result.toolCalls).toHaveLength(callCount);
       expect(result.toolCalls[0]?.tool).toBe(expectedTool);
@@ -222,28 +204,28 @@ describe('Pipeline integration (wired stages)', () => {
   });
 
   describe('llm path', () => {
-    it('"Theo has wrestling at 4" routes to LLM (ambiguous verb)', () => {
-      const result = runPipeline('Theo has wrestling at 4', TEST_HOUSEHOLD_ID);
+    it('"Theo has wrestling at 4" routes to LLM (ambiguous verb)', async () => {
+      const result = await runPipeline('Theo has wrestling at 4', TEST_HOUSEHOLD_ID);
       expect(result.path).toBe('llm');
       expect(result.toolCalls).toHaveLength(0);
     });
   });
 
   describe('tool call param correctness', () => {
-    it('"Buy milk" sets status to on_list with item_id', () => {
-      const result = runPipeline('Buy milk', TEST_HOUSEHOLD_ID);
+    it('"Buy milk" sets status to on_list with item_id', async () => {
+      const result = await runPipeline('Buy milk', TEST_HOUSEHOLD_ID);
       expect(result.toolCalls[0]?.params).toHaveProperty('item_id', ITEMS.milk.id);
       expect(result.toolCalls[0]?.params).toHaveProperty('status', 'on_list');
     });
 
-    it('"I bought the eggs" sets status to purchased', () => {
-      const result = runPipeline('I bought the eggs', TEST_HOUSEHOLD_ID);
+    it('"I bought the eggs" sets status to purchased', async () => {
+      const result = await runPipeline('I bought the eggs', TEST_HOUSEHOLD_ID);
       expect(result.toolCalls[0]?.params).toHaveProperty('item_id', ITEMS.eggs.id);
       expect(result.toolCalls[0]?.params).toHaveProperty('status', 'purchased');
     });
 
-    it('quantity and location propagate through pipeline', () => {
-      const result = runPipeline('We have 10 rolls of toilet paper in the basement pantry', TEST_HOUSEHOLD_ID);
+    it('quantity and location propagate through pipeline', async () => {
+      const result = await runPipeline('We have 10 rolls of toilet paper in the basement pantry', TEST_HOUSEHOLD_ID);
       const params = result.toolCalls[0]?.params;
       expect(params).toHaveProperty('item_id', ITEMS.toiletPaper.id);
       expect(params).toHaveProperty('quantity', 10);
@@ -252,33 +234,33 @@ describe('Pipeline integration (wired stages)', () => {
       expect(params).toHaveProperty('status', 'stocked');
     });
 
-    it('store_id propagates from resolved store entity', () => {
-      const result = runPipeline('Pick up 3 boxes of cereal from Costco', TEST_HOUSEHOLD_ID);
+    it('store_id propagates from resolved store entity', async () => {
+      const result = await runPipeline('Pick up 3 boxes of cereal from Costco', TEST_HOUSEHOLD_ID);
       expect(result.toolCalls[0]?.params).toHaveProperty('store_id', STORES.costco.id);
       expect(result.toolCalls[0]?.params).toHaveProperty('item_id', ITEMS.cereal.id);
     });
 
-    it('"I finished mowing the lawn" completes existing action', () => {
-      const result = runPipeline('I finished mowing the lawn', TEST_HOUSEHOLD_ID);
+    it('"I finished mowing the lawn" completes existing action', async () => {
+      const result = await runPipeline('I finished mowing the lawn', TEST_HOUSEHOLD_ID);
       expect(result.toolCalls[0]?.params).toHaveProperty('action_id', ACTIONS.mowTheLawn.id);
       expect(result.toolCalls[0]?.params).toHaveProperty('status', 'done');
     });
 
-    it('"Remind me Thursday about the dentist" creates action with date', () => {
-      const result = runPipeline('Remind me Thursday about the dentist', TEST_HOUSEHOLD_ID);
+    it('"Remind me Thursday about the dentist" creates action with date', async () => {
+      const result = await runPipeline('Remind me Thursday about the dentist', TEST_HOUSEHOLD_ID);
       expect(result.toolCalls[0]?.params).toHaveProperty('title', 'Dentist');
       expect(result.toolCalls[0]?.params).toHaveProperty('starts_at', '2026-04-02');
     });
 
-    it('"We\'re out of eggs" sets status to needed', () => {
-      const result = runPipeline("We're out of eggs", TEST_HOUSEHOLD_ID);
+    it('"We\'re out of eggs" sets status to needed', async () => {
+      const result = await runPipeline("We're out of eggs", TEST_HOUSEHOLD_ID);
       expect(result.path).toBe('deterministic');
       expect(result.toolCalls[0]?.params).toHaveProperty('item_id', ITEMS.eggs.id);
       expect(result.toolCalls[0]?.params).toHaveProperty('status', 'needed');
     });
 
-    it('quantity_delta for consumption verbs', () => {
-      const result = runPipeline('Used one of the garbage bags', TEST_HOUSEHOLD_ID);
+    it('quantity_delta for consumption verbs', async () => {
+      const result = await runPipeline('Used one of the garbage bags', TEST_HOUSEHOLD_ID);
       expect(result.toolCalls[0]?.params).toHaveProperty('quantity_delta', -1);
       expect(result.toolCalls[0]?.params).toHaveProperty('item_id', ITEMS.garbageBags.id);
     });
