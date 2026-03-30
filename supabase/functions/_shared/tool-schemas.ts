@@ -159,8 +159,8 @@ const createTask: ToolSchema = {
           description: "Due date in ISO 8601 format (YYYY-MM-DD or full datetime)",
         },
         recurrence_interval: {
-          type: "number",
-          description: "How often the task repeats as an integer (e.g. 3, not \"3\"). Used with recurrence_unit.",
+          type: "string",
+          description: "How often the task repeats (e.g. \"3\"). Used with recurrence_unit. Parsed to integer by the API.",
         },
         recurrence_unit: {
           type: "string",

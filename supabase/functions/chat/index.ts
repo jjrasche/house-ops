@@ -26,10 +26,8 @@ interface ChatRequest {
 // -- Configuration --
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions";
-const PRIMARY_MODEL = "llama-3.3-70b-versatile";
-const ESCALATION_MODEL = "llama-3.3-70b-versatile";
-// Groq rate-limits tool calling on some models — escalation uses same model for now,
-// swap to larger model when Groq supports it reliably.
+const PRIMARY_MODEL = "openai/gpt-oss-20b";
+const ESCALATION_MODEL = "openai/gpt-oss-120b";
 const MAX_HISTORY_MESSAGES = 20;
 
 // -- Concept functions --
