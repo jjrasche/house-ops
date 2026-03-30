@@ -1,38 +1,4 @@
-/* Design tokens + reset */
-
-:root {
-  --bg: #1a1a2e;
-  --surface: #16213e;
-  --border: #2a2a4a;
-  --text: #e0e0e0;
-  --text-muted: #8888aa;
-  --accent: #4a6cf7;
-  --accent-text: #ffffff;
-  --success: #2ecc71;
-  --error: #e74c3c;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html, body {
+body {
   margin: 0;
-  padding: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-h1, h2, h3 {
-  font-weight: 600;
-}
-
-a {
-  color: var(--accent);
+  font-family: system-ui, sans-serif;
 }
