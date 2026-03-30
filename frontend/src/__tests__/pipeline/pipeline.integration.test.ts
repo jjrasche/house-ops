@@ -10,64 +10,30 @@ import type {
   EntityType,
   ToolCall,
 } from '../../lib/pipeline/types';
+import { extract } from '../../lib/pipeline/extract';
+import type { LexiconEntry } from '../../lib/pipeline/extract';
 import {
   PEOPLE, ITEMS, LOCATIONS, STORES, ACTIVITIES, ACTIONS,
   resolvedEntity, TEST_HOUSEHOLD_ID,
 } from './seed';
 
-// --- Stage stubs with real logic (same as per-stage tests) ---
+// --- Real EXTRACT stage, stubs for remaining stages ---
 
-// EXTRACT: verb + entity scan + date/quantity regex
-const KNOWN_VERBS = [
-  'pick up', 'out of', 'buy', 'bought', 'add', 'remind', 'schedule', 'need',
-  'have', 'has', 'had', 'used', 'finished', 'save', 'are', 'is',
+const LEXICON: LexiconEntry[] = [
+  ...Object.values(PEOPLE).map(p => ({ name: p.name, entityType: 'person' as const })),
+  ...Object.values(ITEMS).map(i => ({ name: i.name, entityType: 'item' as const })),
+  ...Object.values(LOCATIONS).map(l => ({ name: l.name, entityType: 'location' as const })),
+  ...Object.values(STORES).map(s => ({ name: s.name, entityType: 'store' as const })),
+  ...Object.values(ACTIVITIES).map(a => ({ name: a.name, entityType: 'activity' as const })),
 ];
 
+const REFERENCE_DATE = new Date('2026-03-30T12:00:00');
+
 function stageExtract(text: string): ExtractOutput {
-  const lower = text.toLowerCase();
-  const verb = KNOWN_VERBS.find(v => lower.includes(v)) ?? '';
-
-  const entityMentions: EntityMention[] = [];
-  const allEntities = [
-    ...Object.values(PEOPLE).map(p => ({ name: p.name, type: 'person' as const })),
-    ...Object.values(ITEMS).map(i => ({ name: i.name, type: 'item' as const })),
-    ...Object.values(LOCATIONS).map(l => ({ name: l.name, type: 'location' as const })),
-    ...Object.values(STORES).map(s => ({ name: s.name, type: 'store' as const })),
-    ...Object.values(ACTIVITIES).map(a => ({ name: a.name, type: 'activity' as const })),
-  ].sort((a, b) => b.name.length - a.name.length);
-
-  let remaining = lower;
-  for (const entity of allEntities) {
-    if (remaining.includes(entity.name.toLowerCase())) {
-      entityMentions.push({ text: entity.name, typeHint: entity.type });
-      remaining = remaining.replace(entity.name.toLowerCase(), '');
-    }
-  }
-
-  const unknownMatch = text.match(/\b(dentist|mowing the lawn|date night)\b/i);
-  if (unknownMatch && !entityMentions.some(m => m.text.toLowerCase() === unknownMatch[1]!.toLowerCase())) {
-    entityMentions.push({ text: unknownMatch[1]!, typeHint: 'unknown' });
-  }
-
-  const qMatch = text.match(/(\d+)\s+(box(?:es)?|roll(?:s)?|count)/i);
-  const implicitOne = text.match(/\bone\s+of\s+the\b/i);
-  const quantities = qMatch
-    ? [{ value: parseInt(qMatch[1]!, 10), unit: qMatch[2]!.replace(/e?s$/, '') }]
-    : implicitOne
-      ? [{ value: 1, unit: 'count' }]
-      : [];
-
-  const datePatterns = [
-    { pattern: /\bThursday\b/i, parsed: '2026-04-02' },
-    { pattern: /\btomorrow at (\d{1,2})pm\b/i, parsed: '2026-03-31T15:00' },
-    { pattern: /\bat (\d{1,2})\b/, parsed: '2026-03-30T16:00' },
-    { pattern: /\bnext Saturday evening\b/i, parsed: '2026-04-04T18:00' },
-  ];
-  const dates = datePatterns
-    .filter(d => d.pattern.test(text))
-    .map(d => ({ raw: text.match(d.pattern)![0], parsed: d.parsed }));
-
-  return { verb, entityMentions, dates, quantities };
+  return extract(
+    { text, householdId: TEST_HOUSEHOLD_ID },
+    { lexicon: LEXICON, referenceDate: REFERENCE_DATE },
+  );
 }
 
 // RESOLVE: exact + fuzzy match against seed

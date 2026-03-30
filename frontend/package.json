@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.100.1",
+    "chrono-node": "^2.9.0",
+    "compromise": "^14.15.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "vite-plugin-pwa": "^1.2.0"
