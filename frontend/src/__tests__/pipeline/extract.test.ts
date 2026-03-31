@@ -60,4 +60,61 @@ describe('EXTRACT stage', () => {
     const output = runExtract('Pick up 3 boxes of cereal from Costco');
     expect(output.verb).toBe('pick up');
   });
+
+  describe('entity identity (text + typeHint)', () => {
+    it('"Buy milk" identifies milk as item', () => {
+      const output = runExtract('Buy milk');
+      expect(output.entityMentions[0]).toEqual({ text: 'milk', typeHint: 'item' });
+    });
+
+    it('"Theo has wrestling at 4" identifies person + activity', () => {
+      const output = runExtract('Theo has wrestling at 4');
+      const types = output.entityMentions.map(e => e.typeHint).sort();
+      expect(types).toEqual(['activity', 'person']);
+      expect(output.entityMentions).toContainEqual({ text: 'Theo', typeHint: 'person' });
+      expect(output.entityMentions).toContainEqual({ text: 'wrestling', typeHint: 'activity' });
+    });
+
+    it('"Pick up cereal from Costco" identifies item + store', () => {
+      const output = runExtract('Pick up 3 boxes of cereal from Costco');
+      expect(output.entityMentions).toContainEqual({ text: 'cereal', typeHint: 'item' });
+      expect(output.entityMentions).toContainEqual({ text: 'Costco', typeHint: 'store' });
+    });
+
+    it('"toilet paper in the basement pantry" identifies item + location', () => {
+      const output = runExtract('We have 10 rolls of toilet paper in the basement pantry');
+      expect(output.entityMentions).toContainEqual({ text: 'toilet paper', typeHint: 'item' });
+      expect(output.entityMentions).toContainEqual({ text: 'Basement Pantry', typeHint: 'location' });
+    });
+  });
+
+  describe('date/entity separation', () => {
+    it('"Schedule a date night next Saturday evening" separates entity from date', () => {
+      const output = runExtract('Schedule a date night next Saturday evening');
+      expect(output.entityMentions).toContainEqual({ text: 'date night', typeHint: 'unknown' });
+      expect(output.dates[0]?.raw).toBe('next Saturday evening');
+    });
+  });
+
+  describe('negative entity extraction', () => {
+    it('"Add milk to the shopping list" does not extract "shopping list" as entity', () => {
+      const output = runExtract('Add milk to the shopping list');
+      const texts = output.entityMentions.map(e => e.text.toLowerCase());
+      expect(texts).not.toContain('shopping list');
+      expect(texts).not.toContain('list');
+    });
+
+    it('"Used one of the garbage bags" does not extract "one" or "bags" as entities', () => {
+      const output = runExtract('Used one of the garbage bags');
+      const texts = output.entityMentions.map(e => e.text.toLowerCase());
+      expect(texts).toContain('garbage bags');
+      expect(texts).not.toContain('one');
+      expect(texts).not.toContain('bags');
+    });
+
+    it('implicit quantity extracts value and unit', () => {
+      const output = runExtract('Used one of the garbage bags');
+      expect(output.quantities[0]).toEqual({ value: 1, unit: 'count' });
+    });
+  });
 });

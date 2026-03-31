@@ -35,10 +35,20 @@ people, items, actions, locations. Everything else is knowledge graph or recipes
 EXTRACT → RESOLVE → CLASSIFY → (deterministic path or LLM fallback) → VALIDATE
 
 ### Key Directories
-- `supabase/migrations/` — Postgres schema (TBD — being rewritten)
+- `supabase/migrations/` — Postgres schema (001 core tables, 002 pipeline infra, 003 seed data)
 - `supabase/functions/chat/` — Edge Function (Groq proxy, will become pipeline host)
 - `frontend/src/` — React PWA (minimal shell, to be rebuilt)
 - `docs/` — Architecture documentation
+
+## Testing Standards
+
+- **Assert identity, not just counts.** `toHaveLength(2)` is necessary but insufficient. Assert `text`, `typeHint`, `entityId`, `entityType` — the values downstream stages depend on.
+- **Order-independent matching.** Use `toContainEqual` when output order isn't guaranteed. Don't assert `[0]` index unless order is part of the contract.
+- **Data-driven tests.** Use `it.each` with test case arrays for repetitive assertions. One row per scenario, columns map to inputs + expected outputs.
+- **Negative assertions.** Test that unwanted outputs are excluded (function words, non-entity nouns, wrong entity types). Missing a negative case is how bugs hide.
+- **Mock at boundaries only.** Mock Supabase client, not internal functions. Shared mocks live in `__tests__/pipeline/mock-supabase.ts`. Seed data in `seed.ts`.
+- **Three test levels.** Unit tests for concept functions, integration tests for orchestrators (wire real stages), E2E for external APIs (Groq). Pipeline tests must not require Supabase running.
+- **DRY test infrastructure.** Shared helpers (`createMockSupabase`, `resolvedEntity`, seed constants) prevent duplication. Extract after 2 similar implementations.
 
 ## Global References
 
