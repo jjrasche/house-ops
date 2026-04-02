@@ -6,21 +6,20 @@ import type {
   ValidateOutput,
   PipelineResult,
   EntityMention,
-  EntityType,
   ToolCall,
 } from '../../lib/pipeline/types';
 import { extract } from '../../lib/pipeline/extract';
 import type { LexiconEntry } from '../../lib/pipeline/extract';
 import { resolve } from '../../lib/pipeline/resolve';
-import type { ResolveOptions } from '../../lib/pipeline/resolve';
+import { classify } from '../../lib/pipeline/classify';
 import {
   PEOPLE, ITEMS, LOCATIONS, STORES, ACTIVITIES, ACTIONS,
   TEST_HOUSEHOLD_ID,
 } from './seed';
-import { createMockSupabase } from './mock-supabase';
+import { createMockSupabase, VERB_TOOL_SEED } from './mock-supabase';
 import type { SeedRow } from './mock-supabase';
 
-// --- Real EXTRACT + RESOLVE stages, stubs for CLASSIFY/ASSEMBLE/VALIDATE ---
+// --- Real EXTRACT + RESOLVE + CLASSIFY, stubs for ASSEMBLE/VALIDATE ---
 
 const LEXICON: LexiconEntry[] = [
   ...Object.values(PEOPLE).map(p => ({ name: p.name, entityType: 'person' as const })),
@@ -41,7 +40,10 @@ const SEED_ENTITIES: SeedRow[] = [
   ...Object.values(ACTIONS).map(a => ({ id: a.id, name: a.title, entityType: 'action' })),
 ];
 
-const RESOLVE_OPTIONS: ResolveOptions = { supabase: createMockSupabase(SEED_ENTITIES) };
+const mockSupabase = createMockSupabase({
+  seedEntities: SEED_ENTITIES,
+  verbToolRows: VERB_TOOL_SEED,
+});
 
 function stageExtract(text: string): ExtractOutput {
   return extract(
@@ -53,36 +55,20 @@ function stageExtract(text: string): ExtractOutput {
 async function stageResolve(mentions: readonly EntityMention[], verb: string): Promise<ResolveOutput> {
   return resolve(
     { entityMentions: mentions, householdId: TEST_HOUSEHOLD_ID, verb },
-    RESOLVE_OPTIONS,
+    { supabase: mockSupabase },
   );
 }
 
-// CLASSIFY: verb + entity types lookup
-const VERB_TOOL_LOOKUP: Record<string, { toolName: string; confidence: number }> = {
-  'buy|item': { toolName: 'update_item', confidence: 0.95 },
-  'add|item': { toolName: 'update_item', confidence: 0.93 },
-  'need|item': { toolName: 'update_item', confidence: 0.94 },
-  'bought|item': { toolName: 'update_item', confidence: 0.94 },
-  'have|item,location': { toolName: 'update_item', confidence: 0.92 },
-  'used|item': { toolName: 'update_item', confidence: 0.92 },
-  'pick up|item,store': { toolName: 'update_item', confidence: 0.95 },
-  'out of|item': { toolName: 'update_item', confidence: 0.90 },
-  'remind|': { toolName: 'create_action', confidence: 0.93 },
-  'schedule|': { toolName: 'create_action', confidence: 0.93 },
-  'finished|action': { toolName: 'update_action', confidence: 0.92 },
-};
-
-function stageClassify(verb: string, resolveResult: ResolveOutput): ClassifyOutput {
-  const types = resolveResult.resolved.map(r => r.entityType).sort().join(',');
-  const key = `${verb}|${types}`;
-  const lookup = VERB_TOOL_LOOKUP[key];
-
-  if (lookup) {
-    return { toolName: lookup.toolName, confidence: lookup.confidence, needsLlm: false, canAssemble: true };
-  }
-
-  // Two same-typed entities or ambiguous verb → LLM
-  return { toolName: null, confidence: 0.3, needsLlm: true, canAssemble: false };
+async function stageClassify(verb: string, resolveResult: ResolveOutput): Promise<ClassifyOutput> {
+  return classify(
+    {
+      verb,
+      entityTypes: resolveResult.resolved.map(r => r.entityType),
+      resolvedCount: resolveResult.resolved.length,
+      unresolvedCount: resolveResult.unresolved.length,
+    },
+    { supabase: mockSupabase, householdId: TEST_HOUSEHOLD_ID },
+  );
 }
 
 // ASSEMBLE: map resolved entities to tool params
@@ -163,7 +149,7 @@ function stageValidate(toolCall: ToolCall): ValidateOutput {
 async function runPipeline(text: string, householdId: number): Promise<PipelineResult> {
   const extractResult = stageExtract(text);
   const resolveResult = await stageResolve(extractResult.entityMentions, extractResult.verb);
-  const classifyResult = stageClassify(extractResult.verb, resolveResult);
+  const classifyResult = await stageClassify(extractResult.verb, resolveResult);
 
   if (classifyResult.needsLlm || !classifyResult.toolName) {
     return { toolCalls: [], path: 'llm', stageExecutions: [], confidence: classifyResult.confidence };

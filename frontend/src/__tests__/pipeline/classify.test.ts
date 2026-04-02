@@ -1,130 +1,198 @@
 import { describe, it, expect } from 'vitest';
-import type { ClassifyInput, ClassifyOutput, EntityType } from '../../lib/pipeline/types';
+import type { ClassifyInput, EntityType } from '../../lib/pipeline/types';
+import { classify } from '../../lib/pipeline/classify';
+import type { ClassifyOptions } from '../../lib/pipeline/classify';
+import { createMockSupabase, VERB_TOOL_SEED } from './mock-supabase';
+import type { VerbToolRow } from './mock-supabase';
+import { TEST_HOUSEHOLD_ID } from './seed';
 
-// Stub: simulates verb_tool_lookup query.
-// Real implementation queries Postgres subset-matching.
-function stubClassify(input: ClassifyInput): ClassifyOutput {
-  const key = `${input.verb}|${[...input.entityTypes].sort().join(',')}`;
-  return CLASSIFY_LOOKUP[key] ?? classifyFallback(input);
+function makeOptions(verbToolRows: readonly VerbToolRow[] = VERB_TOOL_SEED): ClassifyOptions {
+  return {
+    supabase: createMockSupabase({ verbToolRows }),
+    householdId: TEST_HOUSEHOLD_ID,
+  };
 }
 
-function classifyFallback(input: ClassifyInput): ClassifyOutput {
-  if (input.unresolvedCount > 0 && isReferenceVerb(input.verb)) {
-    return { toolName: null, confidence: 0.2, needsLlm: true, canAssemble: false };
-  }
-  return { toolName: null, confidence: 0.3, needsLlm: true, canAssemble: false };
+function makeInput(
+  verb: string,
+  entityTypes: EntityType[],
+  unresolvedCount = 0,
+): ClassifyInput {
+  return {
+    verb,
+    entityTypes,
+    resolvedCount: entityTypes.length,
+    unresolvedCount,
+  };
 }
-
-function isReferenceVerb(verb: string): boolean {
-  return ['is', 'are'].includes(verb);
-}
-
-// verb|sorted_entity_types → output
-const CLASSIFY_LOOKUP: Record<string, ClassifyOutput> = {
-  'buy|item':
-    { toolName: 'update_item', confidence: 0.95, needsLlm: false, canAssemble: true },
-  'add|item':
-    { toolName: 'update_item', confidence: 0.93, needsLlm: false, canAssemble: true },
-  'need|item':
-    { toolName: 'update_item', confidence: 0.94, needsLlm: false, canAssemble: true },
-  'bought|item':
-    { toolName: 'update_item', confidence: 0.94, needsLlm: false, canAssemble: true },
-  'have|item,location':
-    { toolName: 'update_item', confidence: 0.92, needsLlm: false, canAssemble: true },
-  'used|item':
-    { toolName: 'update_item', confidence: 0.92, needsLlm: false, canAssemble: true },
-  'pick up|item,store':
-    { toolName: 'update_item', confidence: 0.95, needsLlm: false, canAssemble: true },
-  'remind|':
-    { toolName: 'create_action', confidence: 0.93, needsLlm: false, canAssemble: true },
-  'schedule|':
-    { toolName: 'create_action', confidence: 0.93, needsLlm: false, canAssemble: true },
-  'finished|action':
-    { toolName: 'update_action', confidence: 0.92, needsLlm: false, canAssemble: true },
-  // Trained from Test 4 outcome:
-  'has|activity,person':
-    { toolName: 'create_action', confidence: 0.85, needsLlm: false, canAssemble: true },
-};
 
 describe('CLASSIFY stage', () => {
-  it.each([
-    ['buy', ['item'] as EntityType[], 'update_item', false],
-    ['add', ['item'] as EntityType[], 'update_item', false],
-    ['bought', ['item'] as EntityType[], 'update_item', false],
-    ['have', ['item', 'location'] as EntityType[], 'update_item', false],
-    ['used', ['item'] as EntityType[], 'update_item', false],
-    ['pick up', ['item', 'store'] as EntityType[], 'update_item', false],
-    ['remind', [] as EntityType[], 'create_action', false],
-    ['schedule', [] as EntityType[], 'create_action', false],
-    ['finished', ['action'] as EntityType[], 'update_action', false],
-    ['has', ['person', 'activity'] as EntityType[], 'create_action', false],
-  ])(
-    'maps verb="%s" + types=%j → tool=%s, needsLlm=%s',
-    (verb, entityTypes, expectedTool, expectedNeedsLlm) => {
-      const input: ClassifyInput = {
-        verb,
-        entityTypes,
-        resolvedCount: entityTypes.length,
-        unresolvedCount: 0,
-      };
-      const output = stubClassify(input);
-      expect(output.toolName).toBe(expectedTool);
-      expect(output.needsLlm).toBe(expectedNeedsLlm);
-      expect(output.canAssemble).toBe(true);
-    },
-  );
-
-  it('routes ambiguous verb "has" without training to LLM', () => {
-    const output = stubClassify({
-      verb: 'has',
-      entityTypes: ['person'],
-      resolvedCount: 1,
-      unresolvedCount: 1,
-    });
-    expect(output.needsLlm).toBe(true);
-    expect(output.confidence).toBeLessThan(0.5);
+  describe('verb + entity type → tool mapping', () => {
+    it.each([
+      ['buy',       ['item'] as EntityType[],              'update_item',   0.95],
+      ['add',       ['item'] as EntityType[],              'update_item',   0.93],
+      ['need',      ['item'] as EntityType[],              'update_item',   0.94],
+      ['bought',    ['item'] as EntityType[],              'update_item',   0.94],
+      ['purchased', ['item'] as EntityType[],              'update_item',   0.94],
+      ['have',      ['item', 'location'] as EntityType[],  'update_item',   0.92],
+      ['used',      ['item'] as EntityType[],              'update_item',   0.92],
+      ['pick up',   ['item', 'store'] as EntityType[],     'update_item',   0.95],
+      ['out of',    ['item'] as EntityType[],              'update_item',   0.90],
+      ['remind',    [] as EntityType[],                    'create_action', 0.93],
+      ['schedule',  [] as EntityType[],                    'create_action', 0.93],
+      ['create',    [] as EntityType[],                    'create_action', 0.90],
+      ['finished',  ['action'] as EntityType[],            'update_action', 0.92],
+      ['completed', ['action'] as EntityType[],            'update_action', 0.92],
+      ['done',      ['action'] as EntityType[],            'update_action', 0.92],
+      ['save',      [] as EntityType[],                    'create_recipe', 0.88],
+    ])(
+      'verb="%s" + types=%j → tool=%s at confidence=%s',
+      async (verb, entityTypes, expectedTool, expectedConfidence) => {
+        const output = await classify(
+          makeInput(verb, entityTypes),
+          makeOptions(),
+        );
+        expect(output.toolName).toBe(expectedTool);
+        expect(output.confidence).toBe(expectedConfidence);
+        expect(output.needsLlm).toBe(expectedConfidence < 0.85);
+        expect(output.canAssemble).toBe(expectedConfidence >= 0.85);
+      },
+    );
   });
 
-  it('routes "are" (state description) to LLM', () => {
-    const output = stubClassify({
-      verb: 'are',
-      entityTypes: ['item'],
-      resolvedCount: 1,
-      unresolvedCount: 0,
+  describe('subset matching', () => {
+    it('"remind" with entityTypes: ["person"] still matches {} row', async () => {
+      const output = await classify(
+        makeInput('remind', ['person']),
+        makeOptions(),
+      );
+      expect(output.toolName).toBe('create_action');
+      expect(output.confidence).toBe(0.93);
     });
-    expect(output.needsLlm).toBe(true);
+
+    it('"pick up" with [item] matches {item} row at 0.90, not {item,store}', async () => {
+      const output = await classify(
+        makeInput('pick up', ['item']),
+        makeOptions(),
+      );
+      expect(output.toolName).toBe('update_item');
+      expect(output.confidence).toBe(0.90);
+    });
   });
 
-  it('halts on unresolved person with stative verb', () => {
-    const output = stubClassify({
-      verb: 'is',
-      entityTypes: [],
-      resolvedCount: 0,
-      unresolvedCount: 2,
+  describe('specificity ranking', () => {
+    it('"pick up" with [item, store] matches {item,store} at 0.95, not {item} at 0.90', async () => {
+      const output = await classify(
+        makeInput('pick up', ['item', 'store']),
+        makeOptions(),
+      );
+      expect(output.toolName).toBe('update_item');
+      expect(output.confidence).toBe(0.95);
     });
-    expect(output.toolName).toBeNull();
-    expect(output.confidence).toBeLessThanOrEqual(0.2);
-    expect(output.needsLlm).toBe(true);
   });
 
-  it('reports higher confidence when all entities resolved', () => {
-    const allResolved = stubClassify({
-      verb: 'pick up',
-      entityTypes: ['item', 'store'],
-      resolvedCount: 2,
-      unresolvedCount: 0,
+  describe('confidence degradation', () => {
+    it('one unresolved entity degrades confidence by 15%', async () => {
+      const output = await classify(
+        makeInput('buy', ['item'], 1),
+        makeOptions(),
+      );
+      expect(output.confidence).toBeCloseTo(0.95 * 0.85, 5);
+      expect(output.needsLlm).toBe(true);
     });
-    expect(allResolved.confidence).toBeGreaterThanOrEqual(0.90);
+
+    it('two unresolved entities degrade confidence further', async () => {
+      const output = await classify(
+        makeInput('buy', ['item'], 2),
+        makeOptions(),
+      );
+      expect(output.confidence).toBeCloseTo(0.95 * 0.70, 5);
+      expect(output.needsLlm).toBe(true);
+    });
+
+    it('empty entity_types tool ignores unresolved (VALUE params like title)', async () => {
+      const output = await classify(
+        makeInput('remind', [], 1),
+        makeOptions(),
+      );
+      expect(output.confidence).toBe(0.93);
+      expect(output.needsLlm).toBe(false);
+    });
+
+    it('zero unresolved preserves seed confidence', async () => {
+      const output = await classify(
+        makeInput('buy', ['item'], 0),
+        makeOptions(),
+      );
+      expect(output.confidence).toBe(0.95);
+      expect(output.needsLlm).toBe(false);
+    });
   });
 
-  it('routes two same-typed entities to LLM', () => {
-    const output = stubClassify({
-      verb: 'need',
-      entityTypes: ['item', 'item'],
-      resolvedCount: 2,
-      unresolvedCount: 0,
+  describe('LLM routing', () => {
+    it('unknown verb falls through to LLM', async () => {
+      const output = await classify(
+        makeInput('juggle', ['item']),
+        makeOptions(),
+      );
+      expect(output.toolName).toBeNull();
+      expect(output.needsLlm).toBe(true);
+      expect(output.confidence).toBe(0.3);
     });
-    // "need|item,item" not in lookup → falls through to LLM
-    expect(output.needsLlm).toBe(true);
+
+    it('stative verb "is" with unresolved entities gets lowest confidence', async () => {
+      const output = await classify(
+        makeInput('is', [], 2),
+        makeOptions(),
+      );
+      expect(output.toolName).toBeNull();
+      expect(output.confidence).toBeLessThanOrEqual(0.2);
+      expect(output.needsLlm).toBe(true);
+    });
+
+    it('"are" routes to LLM (no verb_tool_lookup match)', async () => {
+      const output = await classify(
+        makeInput('are', ['item']),
+        makeOptions(),
+      );
+      expect(output.needsLlm).toBe(true);
+    });
+
+    it('two same-typed entities route to LLM despite tool match', async () => {
+      const output = await classify(
+        makeInput('need', ['item', 'item']),
+        makeOptions(),
+      );
+      expect(output.needsLlm).toBe(true);
+      expect(output.canAssemble).toBe(false);
+    });
+  });
+
+  describe('household isolation', () => {
+    it('household 2 mappings do not appear for household 1', async () => {
+      const customSeed: VerbToolRow[] = [
+        ...VERB_TOOL_SEED,
+        { household_id: 2, verb: 'buy', entity_types: ['item'], tool_name: 'custom_buy', confidence: 0.99, source: 'seed' },
+      ];
+      const output = await classify(
+        makeInput('buy', ['item']),
+        makeOptions(customSeed),
+      );
+      expect(output.toolName).toBe('update_item');
+      expect(output.confidence).toBe(0.95);
+    });
+
+    it('household 2 sees its own mappings', async () => {
+      const customSeed: VerbToolRow[] = [
+        ...VERB_TOOL_SEED,
+        { household_id: 2, verb: 'buy', entity_types: ['item'], tool_name: 'custom_buy', confidence: 0.99, source: 'seed' },
+      ];
+      const output = await classify(
+        makeInput('buy', ['item']),
+        { supabase: createMockSupabase({ verbToolRows: customSeed }), householdId: 2 },
+      );
+      expect(output.toolName).toBe('custom_buy');
+      expect(output.confidence).toBe(0.99);
+    });
   });
 });
