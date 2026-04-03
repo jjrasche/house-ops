@@ -1,158 +1,128 @@
 import { describe, it, expect } from 'vitest';
-import type { ValidateInput, ValidateOutput, ToolCall } from '../../lib/pipeline/types';
+import { validate } from '../../lib/pipeline/validate';
+import type { ValidateOptions } from '../../lib/pipeline/validate';
 import { ITEMS, PEOPLE, LOCATIONS } from './seed';
 
-// Stub: schema validation + FK existence checks.
-// Real implementation queries Postgres for FK validity.
-function stubValidate(input: ValidateInput): ValidateOutput {
-  const errors: string[] = [];
+// --- FK existence checker using seed data ---
 
-  const toolSchema = TOOL_SCHEMAS[input.toolCall.tool];
-  if (!toolSchema) {
-    return { isValid: false, errors: [`Unknown tool: ${input.toolCall.tool}`], confidence: 0 };
-  }
-
-  for (const required of toolSchema.requiredParams) {
-    if (!(required in input.toolCall.params)) {
-      errors.push(`Missing required param: ${required}`);
-    }
-  }
-
-  for (const [paramName, paramValue] of Object.entries(input.toolCall.params)) {
-    const refType = toolSchema.referenceParams[paramName];
-    if (refType && typeof paramValue === 'number') {
-      if (!seedEntityExists(refType, paramValue)) {
-        errors.push(`FK not found: ${paramName}=${paramValue} (type: ${refType})`);
-      }
-    }
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    confidence: errors.length === 0 ? 0.92 : 0,
-  };
-}
-
-interface ToolSchema {
-  requiredParams: string[];
-  referenceParams: Record<string, string>;
-}
-
-const TOOL_SCHEMAS: Record<string, ToolSchema> = {
-  update_item: {
-    requiredParams: ['item_id'],
-    referenceParams: {
-      item_id: 'item',
-      location_id: 'location',
-      person_id: 'person',
-    },
-  },
-  create_action: {
-    requiredParams: ['title'],
-    referenceParams: {
-      person_id: 'person',
-      assigned_to: 'person',
-    },
-  },
-  update_action: {
-    requiredParams: ['action_id'],
-    referenceParams: {
-      action_id: 'action',
-    },
-  },
-  create_item: {
-    requiredParams: ['name'],
-    referenceParams: {
-      person_id: 'person',
-      location_id: 'location',
-    },
-  },
-  create_recipe: {
-    requiredParams: ['name'],
-    referenceParams: {},
-  },
-};
-
-function seedEntityExists(entityType: string, entityId: number): boolean {
+function createSeedEntityChecker(): ValidateOptions['entityExists'] {
   const lookups: Record<string, Record<string, { id: number }>> = {
     item: ITEMS,
     person: PEOPLE,
     location: LOCATIONS,
   };
-  const table = lookups[entityType];
-  if (!table) return true; // action IDs validated differently
-  return Object.values(table).some(row => row.id === entityId);
+
+  return async (entityType: string, entityId: number): Promise<boolean> => {
+    const table = lookups[entityType];
+    if (!table) return true; // action IDs validated differently
+    return Object.values(table).some(row => row.id === entityId);
+  };
 }
 
+const withFkChecks: ValidateOptions = { entityExists: createSeedEntityChecker() };
+
+// --- Tests ---
+
 describe('VALIDATE stage', () => {
-  it('accepts valid update_item with resolved FK', () => {
-    const output = stubValidate({
-      toolCall: { tool: 'update_item', params: { item_id: 1, status: 'on_list' } },
+  describe('schema validation', () => {
+    it('accepts valid update_item with required item_id', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'update_item', params: { item_id: 1, status: 'on_list' } } },
+      );
+      expect(output.isValid).toBe(true);
+      expect(output.errors).toHaveLength(0);
+      expect(output.confidence).toBe(0.92);
     });
-    expect(output.isValid).toBe(true);
-    expect(output.errors).toHaveLength(0);
+
+    it('rejects update_item missing item_id', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'update_item', params: { status: 'on_list' } } },
+      );
+      expect(output.isValid).toBe(false);
+      expect(output.errors).toContain('Missing required param: item_id');
+      expect(output.confidence).toBe(0);
+    });
+
+    it('rejects create_action missing title', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'create_action', params: { person_id: 4 } } },
+      );
+      expect(output.isValid).toBe(false);
+      expect(output.errors).toContain('Missing required param: title');
+    });
+
+    it('rejects unknown tool', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'nonexistent_tool', params: {} } },
+      );
+      expect(output.isValid).toBe(false);
+      expect(output.errors[0]).toContain('Unknown tool');
+    });
+
+    it('accepts create_recipe with name only', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'create_recipe', params: { name: 'Chicken Tikka Masala', method: 'instant_pot' } } },
+      );
+      expect(output.isValid).toBe(true);
+    });
+
+    it('accepts update_action with action_id', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'update_action', params: { action_id: 1, status: 'done' } } },
+      );
+      expect(output.isValid).toBe(true);
+    });
   });
 
-  it('rejects update_item with missing item_id', () => {
-    const output = stubValidate({
-      toolCall: { tool: 'update_item', params: { status: 'on_list' } },
+  describe('FK existence checks', () => {
+    it('accepts update_item with valid item FK', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'update_item', params: { item_id: ITEMS.milk.id, status: 'on_list' } } },
+        withFkChecks,
+      );
+      expect(output.isValid).toBe(true);
     });
-    expect(output.isValid).toBe(false);
-    expect(output.errors).toContain('Missing required param: item_id');
-  });
 
-  it('rejects update_item with invalid FK', () => {
-    const output = stubValidate({
-      toolCall: { tool: 'update_item', params: { item_id: 999 } },
+    it('rejects update_item with invalid item FK', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'update_item', params: { item_id: 999 } } },
+        withFkChecks,
+      );
+      expect(output.isValid).toBe(false);
+      expect(output.errors[0]).toContain('FK not found');
+      expect(output.errors[0]).toContain('item_id=999');
     });
-    expect(output.isValid).toBe(false);
-    expect(output.errors[0]).toContain('FK not found');
-  });
 
-  it('accepts create_action with valid person reference', () => {
-    const output = stubValidate({
-      toolCall: {
-        tool: 'create_action',
-        params: { title: 'Wrestling', person_id: 4, starts_at: '2026-03-30T16:00' },
-      },
+    it('accepts update_item with valid item + location FKs', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'update_item', params: { item_id: ITEMS.toiletPaper.id, quantity: 10, location_id: LOCATIONS.basementPantry.id, status: 'stocked' } } },
+        withFkChecks,
+      );
+      expect(output.isValid).toBe(true);
     });
-    expect(output.isValid).toBe(true);
-  });
 
-  it('rejects create_action with missing title', () => {
-    const output = stubValidate({
-      toolCall: { tool: 'create_action', params: { person_id: 4 } },
+    it('rejects update_item with invalid location FK', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'update_item', params: { item_id: ITEMS.milk.id, location_id: 999 } } },
+        withFkChecks,
+      );
+      expect(output.isValid).toBe(false);
+      expect(output.errors[0]).toContain('location_id=999');
     });
-    expect(output.isValid).toBe(false);
-    expect(output.errors).toContain('Missing required param: title');
-  });
 
-  it('rejects unknown tool', () => {
-    const output = stubValidate({
-      toolCall: { tool: 'nonexistent_tool', params: {} },
+    it('accepts create_action with valid person reference', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'create_action', params: { title: 'Wrestling', person_id: PEOPLE.theo.id, starts_at: '2026-03-30T16:00' } } },
+        withFkChecks,
+      );
+      expect(output.isValid).toBe(true);
     });
-    expect(output.isValid).toBe(false);
-    expect(output.errors[0]).toContain('Unknown tool');
-  });
 
-  it('accepts update_item with location FK', () => {
-    const output = stubValidate({
-      toolCall: {
-        tool: 'update_item',
-        params: { item_id: 6, quantity: 10, location_id: 5, status: 'stocked' },
-      },
+    it('skips FK checks when entityExists not provided', async () => {
+      const output = await validate(
+        { toolCall: { tool: 'update_item', params: { item_id: 999 } } },
+      );
+      expect(output.isValid).toBe(true);
     });
-    expect(output.isValid).toBe(true);
-  });
-
-  it('accepts create_recipe with name only', () => {
-    const output = stubValidate({
-      toolCall: {
-        tool: 'create_recipe',
-        params: { name: 'Chicken Tikka Masala', method: 'instant_pot' },
-      },
-    });
-    expect(output.isValid).toBe(true);
   });
 });

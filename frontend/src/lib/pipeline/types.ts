@@ -102,7 +102,9 @@ export interface ClassifyOutput {
 
 export interface AssembleInput {
   readonly toolName: string;
+  readonly verb: string;
   readonly resolved: readonly ResolvedEntity[];
+  readonly unresolved: readonly string[];
   readonly dates: readonly ParsedDate[];
   readonly quantities: readonly ParsedQuantity[];
 }
