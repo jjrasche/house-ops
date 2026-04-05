@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
-import type { ToolCall } from './lib/pipeline/types';
+import type { ToolCall, PipelineResult } from './lib/pipeline/types';
 import type { PipelineOptions } from './lib/pipeline/router';
+import { executeTool } from './lib/pipeline/execute';
 import { ChatInput } from './components/chat-input';
 import { createClient } from '@supabase/supabase-js';
 
@@ -17,9 +18,9 @@ const pipelineOptions: PipelineOptions = {
 };
 
 export default function App() {
-  const handleExecute = useCallback((toolCall: ToolCall) => {
-    // TODO(HOUSE-XX): execute tool call via Supabase mutation
-    console.log('Execute:', toolCall);
+  const handleExecute = useCallback(async (toolCall: ToolCall, pipelineResult: PipelineResult) => {
+    const result = await executeTool(toolCall, pipelineResult, { supabase, householdId: 1 });
+    return result;
   }, []);
 
   const handleReject = useCallback((toolCall: ToolCall) => {

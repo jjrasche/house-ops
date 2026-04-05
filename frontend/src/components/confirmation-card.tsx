@@ -1,4 +1,4 @@
-import type { PipelineResult, ToolCall } from '../lib/pipeline/types';
+import type { PipelineResult, ResolvedEntity, ToolCall } from '../lib/pipeline/types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -53,7 +53,7 @@ export function ConfirmationCard({ result, onConfirm, onReject }: ConfirmationCa
         </div>
       </CardHeader>
       <CardContent>
-        <ParamList params={toolCall.params} />
+        <ParamList params={toolCall.params} resolvedEntities={result.resolvedEntities} />
       </CardContent>
       <CardFooter className="gap-2">
         <Button variant="default" onClick={() => onConfirm(toolCall)}>Confirm</Button>
@@ -88,9 +88,14 @@ function ConfidenceBadge({ confidence }: { readonly confidence: number }) {
   return <Badge variant={variant}>{label}</Badge>;
 }
 
-// --- Concept: render param key-value pairs ---
+// --- Concept: render param key-value pairs with entity display names ---
 
-function ParamList({ params }: { readonly params: Record<string, unknown> }) {
+interface ParamListProps {
+  readonly params: Record<string, unknown>;
+  readonly resolvedEntities: readonly ResolvedEntity[];
+}
+
+function ParamList({ params, resolvedEntities }: ParamListProps) {
   const entries = Object.entries(params);
 
   if (entries.length === 0) {
@@ -102,7 +107,7 @@ function ParamList({ params }: { readonly params: Record<string, unknown> }) {
       {entries.map(([key, value]) => (
         <div key={key} className="flex justify-between">
           <dt className="text-muted-foreground">{formatParamLabel(key)}</dt>
-          <dd className="font-medium">{String(value)}</dd>
+          <dd className="font-medium">{resolveDisplayValue(key, value, resolvedEntities)}</dd>
         </div>
       ))}
     </dl>
@@ -119,6 +124,27 @@ function formatToolLabel(toolName: string): string {
 
 function formatParamLabel(paramKey: string): string {
   return PARAM_LABELS[paramKey] ?? paramKey.replaceAll('_', ' ');
+}
+
+// --- Leaf: resolve entity ID param to display name, fall back to raw value ---
+
+const ENTITY_ID_SUFFIX = '_id';
+
+function resolveDisplayValue(
+  paramKey: string,
+  value: unknown,
+  resolvedEntities: readonly ResolvedEntity[],
+): string {
+  if (!paramKey.endsWith(ENTITY_ID_SUFFIX) || typeof value !== 'number') {
+    return String(value);
+  }
+
+  const entityType = paramKey.slice(0, -ENTITY_ID_SUFFIX.length);
+  const matched = resolvedEntities.find(
+    (entity) => entity.entityType === entityType && entity.entityId === value,
+  );
+
+  return matched?.mention ?? String(value);
 }
 
 // --- Leaf: confidence to badge variant ---

@@ -52,9 +52,14 @@ EXTRACT → RESOLVE → CLASSIFY → (deterministic path or LLM fallback) → VA
 
 ## Global References
 
-Read from `~/.claude/references/` when relevant:
-- `coding-standards.md` — Full coding standards with examples
-- `supabase-local-dev.md` — Supabase local dev workflow
+Read from `~/.claude/references/` **before writing code**, not after. These define the patterns this codebase follows — skipping them leads to rework.
+
+| Reference | Read before | Why |
+|---|---|---|
+| `coding-standards.md` | Any implementation | Three-tier hierarchy, one verb per function, beacon names. Every module follows this. |
+| `supabase-local-dev.md` | Supabase mutations, migrations, env switching | Client patterns, DI setup, local vs prod switching |
+| `agent-web-dev.md` | Any UI work | shadcn/ui vocabulary, Playwright testing, PostHog analytics |
+| `docs/architecture-pipeline.md` | Pipeline or entity model changes | Tool schemas, parameter mapping, routing logic, stage contracts |
 
 ## Project-Specific Notes
 - Entity model: everything in DB or unknown. No inference. User confirms novel entities.

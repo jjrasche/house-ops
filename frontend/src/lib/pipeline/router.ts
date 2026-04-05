@@ -66,7 +66,7 @@ export async function runPipeline(
   );
 
   if (classifyResult.needsLlm || !classifyResult.toolName) {
-    return { toolCalls: [], path: 'llm', stageExecutions: executions, confidence: classifyResult.confidence };
+    return { toolCalls: [], resolvedEntities: resolveResult.resolved, path: 'llm', stageExecutions: executions, confidence: classifyResult.confidence };
   }
 
   const assembleInput = {
@@ -91,6 +91,7 @@ export async function runPipeline(
 
   return {
     toolCalls: validateResult.isValid ? assembleResult.toolCalls : [],
+    resolvedEntities: resolveResult.resolved,
     path: 'deterministic',
     stageExecutions: executions,
     confidence: validateResult.isValid ? classifyResult.confidence : 0,

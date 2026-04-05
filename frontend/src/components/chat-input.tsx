@@ -1,16 +1,21 @@
 import { useState, useCallback } from 'react';
 import type { PipelineResult, ToolCall } from '../lib/pipeline/types';
+import type { ExecuteResult } from '../lib/pipeline/execute';
 import type { PipelineOptions } from '../lib/pipeline/router';
 import { runPipeline } from '../lib/pipeline/router';
 import { ConfirmationCard } from './confirmation-card';
 
 // --- Public types ---
 
+export type ExecuteHandler = (toolCall: ToolCall, pipelineResult: PipelineResult) => Promise<ExecuteResult>;
+
 export interface ChatInputProps {
   readonly pipelineOptions: PipelineOptions;
-  readonly onExecute: (toolCall: ToolCall) => void;
+  readonly onExecute: ExecuteHandler;
   readonly onReject: (toolCall: ToolCall) => void;
 }
+
+type FeedbackState = { readonly kind: 'success' } | { readonly kind: 'error'; readonly message: string } | null;
 
 // --- Orchestrator ---
 
@@ -18,6 +23,7 @@ export function ChatInput({ pipelineOptions, onExecute, onReject }: ChatInputPro
   const [inputText, setInputText] = useState('');
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
 
   const submitText = useCallback(async () => {
     const trimmed = inputText.trim();
@@ -25,6 +31,7 @@ export function ChatInput({ pipelineOptions, onExecute, onReject }: ChatInputPro
 
     setIsProcessing(true);
     setResult(null);
+    setFeedback(null);
 
     const pipelineResult = await runPipeline(trimmed, pipelineOptions);
     setResult(pipelineResult);
@@ -42,18 +49,25 @@ export function ChatInput({ pipelineOptions, onExecute, onReject }: ChatInputPro
   );
 
   const handleConfirm = useCallback(
-    (toolCall: ToolCall) => {
-      onExecute(toolCall);
+    async (toolCall: ToolCall) => {
+      if (!result) return;
+      const executeResult = await onExecute(toolCall, result);
       setResult(null);
-      setInputText('');
+      if (executeResult.success) {
+        setFeedback({ kind: 'success' });
+        setInputText('');
+      } else {
+        setFeedback({ kind: 'error', message: executeResult.error ?? 'Execution failed' });
+      }
     },
-    [onExecute],
+    [onExecute, result],
   );
 
   const handleReject = useCallback(
     (toolCall: ToolCall) => {
       onReject(toolCall);
       setResult(null);
+      setFeedback(null);
     },
     [onReject],
   );
@@ -86,6 +100,13 @@ export function ChatInput({ pipelineOptions, onExecute, onReject }: ChatInputPro
           onConfirm={handleConfirm}
           onReject={handleReject}
         />
+      )}
+
+      {feedback?.kind === 'success' && (
+        <p className="text-sm text-green-600" role="status">Done!</p>
+      )}
+      {feedback?.kind === 'error' && (
+        <p className="text-sm text-destructive" role="alert">{feedback.message}</p>
       )}
     </div>
   );

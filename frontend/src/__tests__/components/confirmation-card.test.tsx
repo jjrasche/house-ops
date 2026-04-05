@@ -11,6 +11,7 @@ afterEach(cleanup);
 function buildResult(overrides: Partial<PipelineResult> = {}): PipelineResult {
   return {
     toolCalls: [{ tool: 'update_item_status', params: { item_id: 1, status: 'on_list' } }],
+    resolvedEntities: [],
     path: 'deterministic',
     stageExecutions: [],
     confidence: 0.92,
@@ -88,6 +89,59 @@ describe('ConfirmationCard', () => {
       <ConfirmationCard result={result} onConfirm={vi.fn()} onReject={vi.fn()} />,
     );
     expect(screen.getByText('some new tool')).toBeDefined();
+  });
+
+  // --- Entity display names ---
+
+  it('renders entity mention instead of raw ID when resolved entity matches', () => {
+    const result = buildResult({
+      toolCalls: [{ tool: 'update_item_status', params: { item_id: 1, status: 'on_list' } }],
+      resolvedEntities: [{ mention: 'milk', entityId: 1, entityType: 'item', score: 0.95 }],
+    });
+    render(
+      <ConfirmationCard result={result} onConfirm={vi.fn()} onReject={vi.fn()} />,
+    );
+    expect(screen.getByText('milk')).toBeDefined();
+    expect(screen.queryByText('1')).toBeNull();
+  });
+
+  it('falls back to raw ID when no resolved entity matches', () => {
+    const result = buildResult({
+      toolCalls: [{ tool: 'update_item_status', params: { item_id: 99, status: 'on_list' } }],
+      resolvedEntities: [{ mention: 'milk', entityId: 1, entityType: 'item', score: 0.95 }],
+    });
+    render(
+      <ConfirmationCard result={result} onConfirm={vi.fn()} onReject={vi.fn()} />,
+    );
+    expect(screen.getByText('99')).toBeDefined();
+  });
+
+  it('resolves multiple entity IDs to their mentions', () => {
+    const result = buildResult({
+      toolCalls: [{ tool: 'create_action', params: { person_id: 2, location_id: 3, title: 'pick up' } }],
+      resolvedEntities: [
+        { mention: 'Jim', entityId: 2, entityType: 'person', score: 1.0 },
+        { mention: 'kitchen', entityId: 3, entityType: 'location', score: 0.88 },
+      ],
+    });
+    render(
+      <ConfirmationCard result={result} onConfirm={vi.fn()} onReject={vi.fn()} />,
+    );
+    expect(screen.getByText('Jim')).toBeDefined();
+    expect(screen.getByText('kitchen')).toBeDefined();
+    expect(screen.getByText('pick up')).toBeDefined();
+  });
+
+  it('does not resolve non-ID params even if they are numbers', () => {
+    const result = buildResult({
+      toolCalls: [{ tool: 'update_item_status', params: { item_id: 1, quantity: 3 } }],
+      resolvedEntities: [{ mention: 'milk', entityId: 1, entityType: 'item', score: 0.95 }],
+    });
+    render(
+      <ConfirmationCard result={result} onConfirm={vi.fn()} onReject={vi.fn()} />,
+    );
+    expect(screen.getByText('milk')).toBeDefined();
+    expect(screen.getByText('3')).toBeDefined();
   });
 
   // --- Interactions ---

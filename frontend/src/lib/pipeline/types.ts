@@ -177,6 +177,7 @@ export interface StageExecution {
 
 export interface PipelineResult {
   readonly toolCalls: readonly ToolCall[];
+  readonly resolvedEntities: readonly ResolvedEntity[];
   readonly path: PipelinePath;
   readonly stageExecutions: readonly StageExecution[];
   readonly confidence: number;
