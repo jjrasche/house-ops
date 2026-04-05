@@ -96,7 +96,7 @@ async function findContextRule(
     .eq('verb', verb.toLowerCase())
     .eq('mention', mentionText.toLowerCase())
     .limit(1)
-    .single();
+    .maybeSingle();
 
   return data as ContextRule | null;
 }

@@ -121,6 +121,7 @@ function createNullQueryChain() {
     eq: () => chain,
     limit: () => chain,
     single: () => Promise.resolve({ data: null, error: null }),
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
     order: () => chain,
   };
   return chain;

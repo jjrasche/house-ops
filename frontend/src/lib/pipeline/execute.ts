@@ -163,7 +163,7 @@ function separateIdFromPayload(
 function formatStageRow(execution: StageExecution) {
   return {
     household_id: execution.householdId,
-    conversation_id: execution.conversationId,
+    conversation_id: execution.conversationId || null,
     stage: execution.stage,
     input_payload: execution.inputPayload,
     output_payload: execution.outputPayload,

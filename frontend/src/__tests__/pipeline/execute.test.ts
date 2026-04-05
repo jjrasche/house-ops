@@ -267,7 +267,7 @@ describe('executeTool', () => {
       expect(stageMutation).toBeDefined();
       expect(stageMutation!.payload).toEqual([{
         household_id: 1,
-        conversation_id: 0,
+        conversation_id: null,
         stage: 'extract',
         input_payload: { text: 'buy milk' },
         output_payload: { verb: 'buy' },
