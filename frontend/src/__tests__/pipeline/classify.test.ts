@@ -55,7 +55,7 @@ describe('CLASSIFY stage', () => {
         expect(output.toolName).toBe(expectedTool);
         expect(output.confidence).toBe(expectedConfidence);
         expect(output.needsLlm).toBe(expectedConfidence < 0.85);
-        expect(output.canAssemble).toBe(expectedConfidence >= 0.85);
+        expect(output.canShowCard).toBe(expectedConfidence >= 0.85);
       },
     );
   });
@@ -164,7 +164,7 @@ describe('CLASSIFY stage', () => {
         makeOptions(),
       );
       expect(output.needsLlm).toBe(true);
-      expect(output.canAssemble).toBe(false);
+      expect(output.canShowCard).toBe(false);
     });
   });
 
@@ -175,7 +175,7 @@ describe('CLASSIFY stage', () => {
         makeOptions(),
       );
       expect(output.toolName).toBe('update_item');
-      expect(output.canAssemble).toBe(true);
+      expect(output.canShowCard).toBe(true);
     });
 
     it('verb-only fallback applies heavier confidence penalty', async () => {
@@ -194,7 +194,7 @@ describe('CLASSIFY stage', () => {
         makeOptions(),
       );
       expect(output.toolName).toBe('update_item');
-      expect(output.canAssemble).toBe(true);
+      expect(output.canShowCard).toBe(true);
     });
 
     it('"remind" with no resolved entities still uses normal path (entity_types is empty)', async () => {
@@ -225,7 +225,7 @@ describe('CLASSIFY stage', () => {
         makeOptions(),
       );
       expect(output.toolName).toBe('update_item');
-      expect(output.canAssemble).toBe(true);
+      expect(output.canShowCard).toBe(true);
     });
   });
 

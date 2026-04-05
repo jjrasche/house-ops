@@ -68,7 +68,7 @@ export async function runPipeline(
     ),
   );
 
-  if (!classifyResult.canAssemble || !classifyResult.toolName) {
+  if (!classifyResult.canShowCard || !classifyResult.toolName) {
     const trace = buildTrace(text, extractResult, resolveResult, classifyResult.toolName, {});
     return { toolCalls: [], resolvedEntities: resolveResult.resolved, unresolved: resolveResult.unresolved, trace, path: 'llm', stageExecutions: executions, confidence: classifyResult.confidence, validationErrors: [] };
   }

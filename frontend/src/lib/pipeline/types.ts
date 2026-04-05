@@ -95,7 +95,7 @@ export interface ClassifyOutput {
   readonly toolName: string | null;
   readonly confidence: number;
   readonly needsLlm: boolean;
-  readonly canAssemble: boolean;
+  readonly canShowCard: boolean;
 }
 
 // --- ASSEMBLE (deterministic sub-step, not a logged stage) ---

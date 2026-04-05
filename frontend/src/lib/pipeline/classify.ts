@@ -119,7 +119,7 @@ function assessConfidence(
     needsLlm,
     // Verb-only matches can still assemble — the unresolved entity
     // will surface in the card for the user to confirm
-    canAssemble: !hasDuplicateTypes,
+    canShowCard: !hasDuplicateTypes,
   };
 }
 
@@ -133,7 +133,7 @@ function buildFallbackOutput(input: ClassifyInput): ClassifyOutput {
     toolName: null,
     confidence,
     needsLlm: true,
-    canAssemble: false,
+    canShowCard: false,
   };
 }
 
