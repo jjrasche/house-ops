@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { StageSummary } from './stage-summary';
 import { StageCorrection } from './stage-correction';
+import type { FetchCandidates } from './stage-correction';
 import { EntityResolver } from './entity-resolver';
 
 // --- Public types ---
@@ -16,6 +17,7 @@ export interface ConfirmationCardProps {
   readonly onCorrect?: (correction: Correction) => void;
   readonly onResolveEntity?: (mention: string, entityType: EntityType, entityName: string) => void;
   readonly isResolvingEntity?: boolean;
+  readonly fetchCandidates?: FetchCandidates;
 }
 
 // --- Constants ---
@@ -45,7 +47,7 @@ const PARAM_LABELS: Record<string, string> = {
 // --- Orchestrator ---
 
 export function ConfirmationCard({
-  result, onConfirm, onReject, onCorrect, onResolveEntity, isResolvingEntity,
+  result, onConfirm, onReject, onCorrect, onResolveEntity, isResolvingEntity, fetchCandidates,
 }: ConfirmationCardProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -69,7 +71,7 @@ export function ConfirmationCard({
       </CardHeader>
       <CardContent className="space-y-3">
         {isEditing && onCorrect ? (
-          <StageCorrection trace={result.trace} onCorrect={onCorrect} />
+          <StageCorrection trace={result.trace} onCorrect={onCorrect} fetchCandidates={fetchCandidates} />
         ) : (
           <StageSummary trace={result.trace} />
         )}

@@ -1,18 +1,22 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type {
-  PipelineTrace, Correction,
+  PipelineTrace, Correction, ResolveCorrection, ResolvedEntity,
   ExtractCorrection, ClassifyCorrection, AssembleCorrection,
 } from '../lib/pipeline/types';
+import type { ResolveCandidate } from '../lib/pipeline/resolve';
 import { TOOL_SCHEMAS } from '../lib/pipeline/validate';
 import { Input } from './ui/input';
-import { Select } from './ui/select';
 import { Button } from './ui/button';
+import { Select } from './ui/select';
 
 // --- Public types ---
+
+export type FetchCandidates = (mention: string) => Promise<ResolveCandidate[]>;
 
 export interface StageCorrectionProps {
   readonly trace: PipelineTrace;
   readonly onCorrect: (correction: Correction) => void;
+  readonly fetchCandidates?: FetchCandidates;
 }
 
 // --- Constants ---
@@ -21,12 +25,14 @@ const AVAILABLE_TOOLS = Object.keys(TOOL_SCHEMAS);
 
 // --- Orchestrator ---
 
-export function StageCorrection({ trace, onCorrect }: StageCorrectionProps) {
+export function StageCorrection({ trace, onCorrect, fetchCandidates }: StageCorrectionProps) {
   const [editingStage, setEditingStage] = useState<string | null>(null);
 
   const toggleStage = useCallback((stage: string) => {
     setEditingStage(prev => prev === stage ? null : stage);
   }, []);
+
+  const hasResolvedEntities = trace.resolved.length > 0;
 
   return (
     <div className="space-y-1 text-xs" role="list" aria-label="Stage corrections">
@@ -38,6 +44,20 @@ export function StageCorrection({ trace, onCorrect }: StageCorrectionProps) {
       >
         <ExtractCorrectionForm trace={trace} onCorrect={onCorrect} />
       </CorrectionRow>
+      {hasResolvedEntities && fetchCandidates && (
+        <CorrectionRow
+          label="Resolve"
+          summary={formatResolveSummary(trace)}
+          isEditing={editingStage === 'resolve'}
+          onToggle={() => toggleStage('resolve')}
+        >
+          <ResolveCorrectionForm
+            resolved={trace.resolved}
+            fetchCandidates={fetchCandidates}
+            onCorrect={onCorrect}
+          />
+        </CorrectionRow>
+      )}
       {trace.toolName && (
         <CorrectionRow
           label="Tool"
@@ -90,6 +110,114 @@ function CorrectionRow({ label, summary, isEditing, onToggle, children }: Correc
         </div>
       )}
     </div>
+  );
+}
+
+// --- Concept: resolve correction form (pick from fuzzy match candidates) ---
+
+function ResolveCorrectionForm({
+  resolved,
+  fetchCandidates,
+  onCorrect,
+}: {
+  readonly resolved: readonly ResolvedEntity[];
+  readonly fetchCandidates: FetchCandidates;
+  readonly onCorrect: (correction: ResolveCorrection) => void;
+}) {
+  const [candidateMap, setCandidateMap] = useState<Record<string, ResolveCandidate[]>>({});
+  const [selectedMention, setSelectedMention] = useState<string | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<ResolveCandidate | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+
+    const mentions = resolved.map(r => r.mention);
+    Promise.all(mentions.map(m => fetchCandidates(m).then(c => [m, c] as const)))
+      .then(entries => {
+        if (cancelled) return;
+        setCandidateMap(Object.fromEntries(entries));
+        setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [resolved, fetchCandidates]);
+
+  const handleSelectMention = useCallback((mention: string) => {
+    setSelectedMention(mention);
+    setSelectedCandidate(null);
+  }, []);
+
+  const handleSelectCandidate = useCallback((candidateIndex: string) => {
+    if (!selectedMention) return;
+    const candidates = candidateMap[selectedMention] ?? [];
+    const candidate = candidates[Number(candidateIndex)];
+    if (candidate) setSelectedCandidate(candidate);
+  }, [selectedMention, candidateMap]);
+
+  const handleSubmit = useCallback(() => {
+    if (!selectedMention || !selectedCandidate) return;
+    onCorrect({
+      stage: 'resolve',
+      mention: selectedMention,
+      preferredId: selectedCandidate.entityId,
+      preferredType: selectedCandidate.entityType,
+    });
+  }, [selectedMention, selectedCandidate, onCorrect]);
+
+  if (isLoading) {
+    return <span className="text-xs text-muted-foreground">Loading candidates...</span>;
+  }
+
+  const currentEntity = selectedMention
+    ? resolved.find(r => r.mention === selectedMention)
+    : null;
+
+  const candidates = selectedMention ? (candidateMap[selectedMention] ?? []) : [];
+  const isNewSelection = selectedCandidate !== null
+    && currentEntity !== null
+    && (selectedCandidate.entityId !== currentEntity?.entityId
+      || selectedCandidate.entityType !== currentEntity?.entityType);
+
+  return (
+    <>
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground" htmlFor="resolve-mention">Entity</label>
+        <Select
+          id="resolve-mention"
+          value={selectedMention ?? ''}
+          onChange={e => handleSelectMention(e.target.value)}
+        >
+          <option value="" disabled>Select entity...</option>
+          {resolved.map(r => (
+            <option key={r.mention} value={r.mention}>
+              {r.mention} → {r.entityType}(#{r.entityId})
+            </option>
+          ))}
+        </Select>
+      </div>
+      {selectedMention && candidates.length > 0 && (
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground" htmlFor="resolve-candidate">Match</label>
+          <Select
+            id="resolve-candidate"
+            value={selectedCandidate ? String(candidates.indexOf(selectedCandidate)) : ''}
+            onChange={e => handleSelectCandidate(e.target.value)}
+          >
+            <option value="" disabled>Pick match...</option>
+            {candidates.map((c, i) => (
+              <option key={`${c.entityType}-${c.entityId}`} value={String(i)}>
+                {c.entityType}(#{c.entityId}) — score {c.score.toFixed(2)}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+      <Button size="sm" onClick={handleSubmit} disabled={!isNewSelection}>
+        Apply
+      </Button>
+    </>
   );
 }
 
@@ -206,6 +334,14 @@ function AssembleCorrectionForm({
       </Button>
     </>
   );
+}
+
+// --- Leaf: format resolve summary ---
+
+function formatResolveSummary(trace: PipelineTrace): string {
+  return trace.resolved
+    .map(r => `"${r.mention}" → ${r.entityType}(#${r.entityId})`)
+    .join(', ');
 }
 
 // --- Leaf: format extract summary ---

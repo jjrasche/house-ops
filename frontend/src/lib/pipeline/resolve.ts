@@ -11,6 +11,12 @@ export interface ResolveOptions {
   readonly similarityThreshold?: number;
 }
 
+export interface ResolveCandidate {
+  readonly entityId: number;
+  readonly entityType: EntityType;
+  readonly score: number;
+}
+
 // --- Shape returned by resolve_entity_fuzzy RPC ---
 
 interface FuzzyMatch {
@@ -51,6 +57,37 @@ export async function resolve(
   }
 
   return { resolved, unresolved };
+}
+
+// --- Concept: return top-N fuzzy matches for a mention ---
+// Used by ResolveCorrectionForm to show candidates the user can pick from.
+
+export async function findCandidates(
+  mentionText: string,
+  householdId: number,
+  options: ResolveOptions,
+  maxResults = 5,
+): Promise<ResolveCandidate[]> {
+  const threshold = options.similarityThreshold ?? DEFAULT_SIMILARITY_THRESHOLD;
+
+  const { data } = await options.supabase.rpc('resolve_entity_fuzzy', {
+    p_household_id: householdId,
+    p_mention: mentionText,
+    p_threshold: threshold,
+  });
+
+  const matches = (data ?? []) as FuzzyMatch[];
+  return matches.slice(0, maxResults).map(toCandidate);
+}
+
+// --- Leaf: map FuzzyMatch → ResolveCandidate ---
+
+function toCandidate(match: FuzzyMatch): ResolveCandidate {
+  return {
+    entityId: match.entity_id,
+    entityType: match.entity_type as EntityType,
+    score: match.score,
+  };
 }
 
 // --- Concept: resolve a single entity mention ---

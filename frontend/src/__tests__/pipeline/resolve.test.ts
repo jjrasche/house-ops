@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { resolve } from '../../lib/pipeline/resolve';
+import { resolve, findCandidates } from '../../lib/pipeline/resolve';
 import type { ResolveOptions } from '../../lib/pipeline/resolve';
 import { PEOPLE, ITEMS, LOCATIONS, STORES, ACTIVITIES } from './seed';
 import { createMockSupabase } from './mock-supabase';
@@ -126,5 +126,35 @@ describe('RESOLVE stage', () => {
     expect(output.resolved).toHaveLength(2);
     expect(output.resolved[0]?.entityId).toBe(ITEMS.paperTowels.id);
     expect(output.resolved[1]?.entityId).toBe(ITEMS.dishSoap.id);
+  });
+});
+
+describe('findCandidates', () => {
+  it('returns multiple candidates for "milk" sorted by score', async () => {
+    const candidates = await findCandidates('milk', 1, options);
+    expect(candidates.length).toBeGreaterThanOrEqual(1);
+    expect(candidates[0]!.entityId).toBe(ITEMS.milk.id);
+    expect(candidates[0]!.entityType).toBe('item');
+    expect(candidates[0]!.score).toBeGreaterThan(0);
+  });
+
+  it('returns at most maxResults candidates', async () => {
+    const candidates = await findCandidates('a', 1, options, 2);
+    expect(candidates.length).toBeLessThanOrEqual(2);
+  });
+
+  it('returns empty array for unknown mention', async () => {
+    const candidates = await findCandidates('xyzzyx', 1, options);
+    expect(candidates).toEqual([]);
+  });
+
+  it('returns candidates with entityId, entityType, and score fields', async () => {
+    const candidates = await findCandidates('Costco', 1, options);
+    expect(candidates.length).toBeGreaterThanOrEqual(1);
+    const first = candidates[0]!;
+    expect(first).toHaveProperty('entityId');
+    expect(first).toHaveProperty('entityType');
+    expect(first).toHaveProperty('score');
+    expect(first.entityId).toBe(STORES.costco.id);
   });
 });

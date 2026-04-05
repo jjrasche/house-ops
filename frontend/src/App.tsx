@@ -46,11 +46,11 @@ export default function App() {
   const [toolCallExamples, setToolCallExamples] = useState<ToolCallExample[]>([]);
 
   const refreshLexicon = useCallback(() => {
-    loadLexicon().then(setLexicon);
+    return loadLexicon().then(setLexicon);
   }, []);
 
   const refreshExamples = useCallback(() => {
-    loadToolCallExamples().then(setToolCallExamples);
+    return loadToolCallExamples().then(setToolCallExamples);
   }, []);
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function App() {
         trainOptions={trainOptions}
         onExecute={handleExecute}
         onReject={handleReject}
-        onLexiconChanged={() => { refreshLexicon(); refreshExamples(); }}
+        onLexiconChanged={() => Promise.all([refreshLexicon(), refreshExamples()])}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import type { TrainOptions } from '../lib/pipeline/train';
 import { runPipeline } from '../lib/pipeline/router';
 import { createEntity } from '../lib/pipeline/create-entity';
 import { applyCorrection } from '../lib/pipeline/train';
+import { findCandidates } from '../lib/pipeline/resolve';
 import { ConfirmationCard } from './confirmation-card';
 
 // --- Public types ---
@@ -19,7 +20,7 @@ export interface ChatInputProps {
   readonly trainOptions: TrainOptions;
   readonly onExecute: ExecuteHandler;
   readonly onReject: (toolCall: ToolCall, pipelineResult: PipelineResult) => void;
-  readonly onLexiconChanged: () => void;
+  readonly onLexiconChanged: () => void | Promise<unknown>;
 }
 
 type FeedbackState = { readonly kind: 'success' } | { readonly kind: 'error'; readonly message: string } | null;
@@ -88,7 +89,7 @@ export function ChatInput({
       setIsResolvingEntity(true);
       try {
         await createEntity(entityType, entityName, createEntityOptions);
-        onLexiconChanged();
+        await onLexiconChanged();
         const rerunResult = await runPipeline(inputText.trim(), pipelineOptions);
         setResult(rerunResult);
       } catch {
@@ -98,6 +99,13 @@ export function ChatInput({
       }
     },
     [createEntityOptions, inputText, onLexiconChanged, pipelineOptions],
+  );
+
+  const handleFetchCandidates = useCallback(
+    (mention: string) => findCandidates(
+      mention, pipelineOptions.householdId, { supabase: pipelineOptions.supabase },
+    ),
+    [pipelineOptions.householdId, pipelineOptions.supabase],
   );
 
   const handleCorrect = useCallback(
@@ -144,6 +152,7 @@ export function ChatInput({
           onCorrect={handleCorrect}
           onResolveEntity={handleResolveEntity}
           isResolvingEntity={isResolvingEntity}
+          fetchCandidates={handleFetchCandidates}
         />
       )}
 

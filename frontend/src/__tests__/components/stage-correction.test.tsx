@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StageCorrection } from '../../components/stage-correction';
+import type { FetchCandidates } from '../../components/stage-correction';
 import type { PipelineTrace } from '../../lib/pipeline/types';
+import type { ResolveCandidate } from '../../lib/pipeline/resolve';
 
 afterEach(cleanup);
 
@@ -148,5 +150,78 @@ describe('StageCorrection', () => {
   it('does not render assemble row when params are empty', () => {
     render(<StageCorrection trace={buildTrace({ params: {} })} onCorrect={vi.fn()} />);
     expect(screen.queryByText(/Params/)).toBeNull();
+  });
+
+  // --- Resolve correction ---
+
+  it('renders resolve row when resolved entities exist and fetchCandidates provided', () => {
+    const fetchCandidates: FetchCandidates = vi.fn().mockResolvedValue([]);
+    render(<StageCorrection trace={buildTrace()} onCorrect={vi.fn()} fetchCandidates={fetchCandidates} />);
+    expect(screen.getByText(/Resolve/)).toBeDefined();
+  });
+
+  it('does not render resolve row when no fetchCandidates prop', () => {
+    render(<StageCorrection trace={buildTrace()} onCorrect={vi.fn()} />);
+    expect(screen.queryByText(/Resolve/)).toBeNull();
+  });
+
+  it('does not render resolve row when no resolved entities', () => {
+    const fetchCandidates: FetchCandidates = vi.fn().mockResolvedValue([]);
+    render(
+      <StageCorrection
+        trace={buildTrace({ resolved: [], unresolved: ['milk'] })}
+        onCorrect={vi.fn()}
+        fetchCandidates={fetchCandidates}
+      />,
+    );
+    expect(screen.queryByText(/Resolve/)).toBeNull();
+  });
+
+  it('shows candidates after expanding resolve row', async () => {
+    const candidates: ResolveCandidate[] = [
+      { entityId: 1, entityType: 'item', score: 0.95 },
+      { entityId: 10, entityType: 'person', score: 0.4 },
+    ];
+    const fetchCandidates: FetchCandidates = vi.fn().mockResolvedValue(candidates);
+
+    render(<StageCorrection trace={buildTrace()} onCorrect={vi.fn()} fetchCandidates={fetchCandidates} />);
+    await userEvent.click(screen.getByText(/Resolve/));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Entity')).toBeDefined();
+    });
+  });
+
+  it('calls onCorrect with resolve correction when candidate selected', async () => {
+    const candidates: ResolveCandidate[] = [
+      { entityId: 1, entityType: 'item', score: 0.95 },
+      { entityId: 10, entityType: 'person', score: 0.4 },
+    ];
+    const fetchCandidates: FetchCandidates = vi.fn().mockResolvedValue(candidates);
+    const onCorrect = vi.fn();
+
+    render(<StageCorrection trace={buildTrace()} onCorrect={onCorrect} fetchCandidates={fetchCandidates} />);
+    await userEvent.click(screen.getByText(/Resolve/));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Entity')).toBeDefined();
+    });
+
+    await userEvent.selectOptions(screen.getByLabelText('Entity'), 'milk');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Match')).toBeDefined();
+    });
+
+    // Select the second candidate (different from current resolution)
+    await userEvent.selectOptions(screen.getByLabelText('Match'), '1');
+    await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(onCorrect).toHaveBeenCalledWith({
+      stage: 'resolve',
+      mention: 'milk',
+      preferredId: 10,
+      preferredType: 'person',
+    });
   });
 });
