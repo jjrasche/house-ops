@@ -13,5 +13,11 @@ Thumbs.db
 # Generated files
 nli/tools.json
 
+# Playwright MCP
+.playwright-mcp/
+
+# Screenshots (dev/debug artifacts)
+*.png
+
 # Ansible secrets (generated, never committed)
 infra/ansible/vars/secrets.yml
