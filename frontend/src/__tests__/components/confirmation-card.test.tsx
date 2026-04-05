@@ -8,10 +8,21 @@ afterEach(cleanup);
 
 // --- Test data ---
 
+const EMPTY_TRACE = {
+  inputText: '',
+  verb: '',
+  entityMentions: [],
+  resolved: [],
+  unresolved: [],
+  toolName: null,
+  params: {},
+} as const;
+
 function buildResult(overrides: Partial<PipelineResult> = {}): PipelineResult {
   return {
     toolCalls: [{ tool: 'update_item_status', params: { item_id: 1, status: 'on_list' } }],
     resolvedEntities: [],
+    trace: EMPTY_TRACE,
     path: 'deterministic',
     stageExecutions: [],
     confidence: 0.92,

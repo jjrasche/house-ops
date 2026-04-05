@@ -173,11 +173,24 @@ export interface StageExecution {
   readonly householdId: number;
 }
 
+// --- Pipeline trace (what each stage did, for user review + correction) ---
+
+export interface PipelineTrace {
+  readonly inputText: string;
+  readonly verb: string;
+  readonly entityMentions: readonly EntityMention[];
+  readonly resolved: readonly ResolvedEntity[];
+  readonly unresolved: readonly string[];
+  readonly toolName: string | null;
+  readonly params: Readonly<Record<string, unknown>>;
+}
+
 // --- Pipeline result ---
 
 export interface PipelineResult {
   readonly toolCalls: readonly ToolCall[];
   readonly resolvedEntities: readonly ResolvedEntity[];
+  readonly trace: PipelineTrace;
   readonly path: PipelinePath;
   readonly stageExecutions: readonly StageExecution[];
   readonly confidence: number;

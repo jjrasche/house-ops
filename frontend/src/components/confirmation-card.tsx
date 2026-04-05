@@ -2,6 +2,7 @@ import type { PipelineResult, ResolvedEntity, ToolCall } from '../lib/pipeline/t
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { StageSummary } from './stage-summary';
 
 // --- Public types ---
 
@@ -52,7 +53,9 @@ export function ConfirmationCard({ result, onConfirm, onReject }: ConfirmationCa
           <ConfidenceBadge confidence={result.confidence} />
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
+        <StageSummary trace={result.trace} />
+        <hr className="border-border" />
         <ParamList params={toolCall.params} resolvedEntities={result.resolvedEntities} />
       </CardContent>
       <CardFooter className="gap-2">

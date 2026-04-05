@@ -1,5 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { PipelineResult, StageExecution, StageName } from './types';
+import type {
+  EntityMention, ResolvedEntity,
+  PipelineResult, PipelineTrace, StageExecution, StageName,
+} from './types';
 import type { LexiconEntry } from './extract';
 import type { ValidateOptions } from './validate';
 import { extract } from './extract';
@@ -66,7 +69,8 @@ export async function runPipeline(
   );
 
   if (classifyResult.needsLlm || !classifyResult.toolName) {
-    return { toolCalls: [], resolvedEntities: resolveResult.resolved, path: 'llm', stageExecutions: executions, confidence: classifyResult.confidence };
+    const trace = buildTrace(text, extractResult, resolveResult, classifyResult.toolName, {});
+    return { toolCalls: [], resolvedEntities: resolveResult.resolved, trace, path: 'llm', stageExecutions: executions, confidence: classifyResult.confidence };
   }
 
   const assembleInput = {
@@ -89,9 +93,13 @@ export async function runPipeline(
     ),
   );
 
+  const toolCall = assembleResult.toolCalls[0];
+  const trace = buildTrace(text, extractResult, resolveResult, classifyResult.toolName, toolCall?.params ?? {});
+
   return {
     toolCalls: validateResult.isValid ? assembleResult.toolCalls : [],
     resolvedEntities: resolveResult.resolved,
+    trace,
     path: 'deterministic',
     stageExecutions: executions,
     confidence: validateResult.isValid ? classifyResult.confidence : 0,
@@ -132,6 +140,26 @@ async function recordExecutionAsync<T extends object>(
 
   executions.push(buildExecution(stage, conversationId, householdId, inputPayload, output, durationMs));
   return output;
+}
+
+// --- Leaf: collect stage outputs into a user-visible trace ---
+
+function buildTrace(
+  inputText: string,
+  extractResult: { readonly verb: string; readonly entityMentions: readonly EntityMention[] },
+  resolveResult: { readonly resolved: readonly ResolvedEntity[]; readonly unresolved: readonly string[] },
+  toolName: string | null,
+  params: Readonly<Record<string, unknown>>,
+): PipelineTrace {
+  return {
+    inputText,
+    verb: extractResult.verb,
+    entityMentions: extractResult.entityMentions,
+    resolved: resolveResult.resolved,
+    unresolved: resolveResult.unresolved,
+    toolName,
+    params,
+  };
 }
 
 // --- Leaf: construct StageExecution record ---

@@ -120,4 +120,44 @@ describe('Stage execution logging', () => {
       expect(execution.userVerdict).toBeNull();
     }
   });
+
+  // --- Pipeline trace ---
+
+  it('trace captures input text and extracted verb', async () => {
+    const result = await runPipeline('Buy milk', pipelineOptions);
+
+    expect(result.trace.inputText).toBe('Buy milk');
+    expect(result.trace.verb).toBe('buy');
+  });
+
+  it('trace captures entity mentions from extract', async () => {
+    const result = await runPipeline('Buy milk', pipelineOptions);
+
+    expect(result.trace.entityMentions).toContainEqual(
+      expect.objectContaining({ text: 'milk', typeHint: 'item' }),
+    );
+  });
+
+  it('trace captures resolved entities and unresolved mentions', async () => {
+    const result = await runPipeline('Buy milk', pipelineOptions);
+
+    expect(result.trace.resolved).toContainEqual(
+      expect.objectContaining({ mention: 'milk', entityType: 'item' }),
+    );
+    expect(result.trace.unresolved).toEqual([]);
+  });
+
+  it('trace captures tool name and assembled params on deterministic path', async () => {
+    const result = await runPipeline('Buy milk', pipelineOptions);
+
+    expect(result.trace.toolName).toBe('update_item');
+    expect(result.trace.params).toMatchObject({ item_id: 1, status: 'on_list' });
+  });
+
+  it('trace has null toolName and empty params on LLM path', async () => {
+    const result = await runPipeline('do something weird', pipelineOptions);
+
+    expect(result.trace.toolName).toBeNull();
+    expect(result.trace.params).toEqual({});
+  });
 });

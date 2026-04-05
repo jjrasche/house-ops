@@ -69,10 +69,21 @@ function createMutationTracker() {
 
 // --- Test data ---
 
+const EMPTY_TRACE = {
+  inputText: 'buy milk',
+  verb: 'buy',
+  entityMentions: [{ text: 'milk', typeHint: 'item' as const }],
+  resolved: [{ mention: 'milk', entityId: 1, entityType: 'item' as const, score: 0.95 }],
+  unresolved: [],
+  toolName: 'update_item',
+  params: { item_id: 1, status: 'on_list' },
+} as const;
+
 function buildPipelineResult(overrides: Partial<PipelineResult> = {}): PipelineResult {
   return {
     toolCalls: [{ tool: 'update_item', params: { item_id: 1, status: 'on_list' } }],
     resolvedEntities: [{ mention: 'milk', entityId: 1, entityType: 'item', score: 0.95 }],
+    trace: EMPTY_TRACE,
     path: 'deterministic',
     stageExecutions: [
       {
