@@ -83,8 +83,10 @@ function buildPipelineResult(overrides: Partial<PipelineResult> = {}): PipelineR
   return {
     toolCalls: [{ tool: 'update_item', params: { item_id: 1, status: 'on_list' } }],
     resolvedEntities: [{ mention: 'milk', entityId: 1, entityType: 'item', score: 0.95 }],
+    unresolved: [],
     trace: EMPTY_TRACE,
     path: 'deterministic',
+    validationErrors: [],
     stageExecutions: [
       {
         stage: 'extract',

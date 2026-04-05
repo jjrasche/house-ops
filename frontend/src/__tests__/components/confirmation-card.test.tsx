@@ -22,10 +22,12 @@ function buildResult(overrides: Partial<PipelineResult> = {}): PipelineResult {
   return {
     toolCalls: [{ tool: 'update_item_status', params: { item_id: 1, status: 'on_list' } }],
     resolvedEntities: [],
+    unresolved: [],
     trace: EMPTY_TRACE,
     path: 'deterministic',
     stageExecutions: [],
     confidence: 0.92,
+    validationErrors: [],
     ...overrides,
   };
 }
@@ -153,6 +155,40 @@ describe('ConfirmationCard', () => {
     );
     expect(screen.getByText('milk')).toBeDefined();
     expect(screen.getByText('3')).toBeDefined();
+  });
+
+  // --- Unresolved entities ---
+
+  it('shows unresolved warning when entities are unresolved', () => {
+    const result = buildResult({
+      toolCalls: [{ tool: 'update_item', params: { status: 'on_list' } }],
+      unresolved: ['chex mix'],
+    });
+    render(
+      <ConfirmationCard result={result} onConfirm={vi.fn()} onReject={vi.fn()} />,
+    );
+    expect(screen.getByText(/chex mix/)).toBeDefined();
+    expect(screen.getByText(/not in the database/)).toBeDefined();
+  });
+
+  it('disables confirm button when validation errors exist', () => {
+    const result = buildResult({
+      validationErrors: ['Missing required param: item_id'],
+    });
+    render(
+      <ConfirmationCard result={result} onConfirm={vi.fn()} onReject={vi.fn()} />,
+    );
+    const confirmButton = screen.getByRole('button', { name: 'Needs resolution' });
+    expect(confirmButton).toBeDefined();
+    expect(confirmButton.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('shows confirm button when no validation errors', () => {
+    render(
+      <ConfirmationCard result={buildResult()} onConfirm={vi.fn()} onReject={vi.fn()} />,
+    );
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+    expect(confirmButton.hasAttribute('disabled')).toBe(false);
   });
 
   // --- Interactions ---

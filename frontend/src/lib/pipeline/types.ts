@@ -223,8 +223,10 @@ export type Correction =
 export interface PipelineResult {
   readonly toolCalls: readonly ToolCall[];
   readonly resolvedEntities: readonly ResolvedEntity[];
+  readonly unresolved: readonly string[];
   readonly trace: PipelineTrace;
   readonly path: PipelinePath;
   readonly stageExecutions: readonly StageExecution[];
   readonly confidence: number;
+  readonly validationErrors: readonly string[];
 }

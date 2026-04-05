@@ -44,6 +44,8 @@ export function ConfirmationCard({ result, onConfirm, onReject }: ConfirmationCa
   }
 
   const toolCall = result.toolCalls[0]!;
+  const hasUnresolved = result.unresolved.length > 0;
+  const hasErrors = result.validationErrors.length > 0;
 
   return (
     <Card className="w-full max-w-md">
@@ -55,14 +57,27 @@ export function ConfirmationCard({ result, onConfirm, onReject }: ConfirmationCa
       </CardHeader>
       <CardContent className="space-y-3">
         <StageSummary trace={result.trace} />
+        {hasUnresolved && <UnresolvedWarning mentions={result.unresolved} />}
         <hr className="border-border" />
         <ParamList params={toolCall.params} resolvedEntities={result.resolvedEntities} />
       </CardContent>
       <CardFooter className="gap-2">
-        <Button variant="default" onClick={() => onConfirm(toolCall)}>Confirm</Button>
+        <Button variant="default" onClick={() => onConfirm(toolCall)} disabled={hasErrors}>
+          {hasErrors ? 'Needs resolution' : 'Confirm'}
+        </Button>
         <Button variant="ghost" onClick={() => onReject(toolCall)}>Reject</Button>
       </CardFooter>
     </Card>
+  );
+}
+
+// --- Concept: warning for unresolved entity mentions ---
+
+function UnresolvedWarning({ mentions }: { readonly mentions: readonly string[] }) {
+  return (
+    <div className="rounded-md bg-yellow-500/10 px-3 py-2 text-xs text-yellow-500" role="alert">
+      Unknown: {mentions.map(m => `"${m}"`).join(', ')} — not in the database yet
+    </div>
   );
 }
 

@@ -68,9 +68,9 @@ export async function runPipeline(
     ),
   );
 
-  if (classifyResult.needsLlm || !classifyResult.toolName) {
+  if (!classifyResult.canAssemble || !classifyResult.toolName) {
     const trace = buildTrace(text, extractResult, resolveResult, classifyResult.toolName, {});
-    return { toolCalls: [], resolvedEntities: resolveResult.resolved, trace, path: 'llm', stageExecutions: executions, confidence: classifyResult.confidence };
+    return { toolCalls: [], resolvedEntities: resolveResult.resolved, unresolved: resolveResult.unresolved, trace, path: 'llm', stageExecutions: executions, confidence: classifyResult.confidence, validationErrors: [] };
   }
 
   const assembleInput = {
@@ -97,12 +97,14 @@ export async function runPipeline(
   const trace = buildTrace(text, extractResult, resolveResult, classifyResult.toolName, toolCall?.params ?? {});
 
   return {
-    toolCalls: validateResult.isValid ? assembleResult.toolCalls : [],
+    toolCalls: assembleResult.toolCalls,
     resolvedEntities: resolveResult.resolved,
+    unresolved: resolveResult.unresolved,
     trace,
     path: 'deterministic',
     stageExecutions: executions,
-    confidence: validateResult.isValid ? classifyResult.confidence : 0,
+    confidence: classifyResult.confidence,
+    validationErrors: validateResult.errors,
   };
 }
 

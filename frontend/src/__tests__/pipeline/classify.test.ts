@@ -168,6 +168,67 @@ describe('CLASSIFY stage', () => {
     });
   });
 
+  describe('verb-only fallback for unresolved entities', () => {
+    it('"add" with no resolved entities falls back to update_item via verb-only', async () => {
+      const output = await classify(
+        makeInput('add', [], 1),
+        makeOptions(),
+      );
+      expect(output.toolName).toBe('update_item');
+      expect(output.canAssemble).toBe(true);
+    });
+
+    it('verb-only fallback applies heavier confidence penalty', async () => {
+      const output = await classify(
+        makeInput('add', [], 1),
+        makeOptions(),
+      );
+      // Base 0.93, penalized for verb-only + unresolved
+      expect(output.confidence).toBeLessThan(0.85);
+      expect(output.confidence).toBeGreaterThan(0.5);
+    });
+
+    it('"buy" with no resolved entities falls back to update_item', async () => {
+      const output = await classify(
+        makeInput('buy', [], 1),
+        makeOptions(),
+      );
+      expect(output.toolName).toBe('update_item');
+      expect(output.canAssemble).toBe(true);
+    });
+
+    it('"remind" with no resolved entities still uses normal path (entity_types is empty)', async () => {
+      const output = await classify(
+        makeInput('remind', [], 1),
+        makeOptions(),
+      );
+      // "remind" has entity_types=[], so subset match succeeds normally
+      expect(output.toolName).toBe('create_action');
+      expect(output.confidence).toBe(0.93);
+    });
+
+    it('unknown verb with no resolved entities still routes to LLM', async () => {
+      const output = await classify(
+        makeInput('juggle', [], 1),
+        makeOptions(),
+      );
+      expect(output.toolName).toBeNull();
+      expect(output.needsLlm).toBe(true);
+    });
+
+    it('verb-only fallback picks the most common tool for the verb', async () => {
+      // "pick up" has two entries: {item,store} and {item}
+      // Both require "item", neither subset-matches empty input
+      // Verb-only should pick one of them
+      const output = await classify(
+        makeInput('pick up', [], 1),
+        makeOptions(),
+      );
+      expect(output.toolName).toBe('update_item');
+      expect(output.canAssemble).toBe(true);
+    });
+  });
+
   describe('household isolation', () => {
     it('household 2 mappings do not appear for household 1', async () => {
       const customSeed: VerbToolRow[] = [

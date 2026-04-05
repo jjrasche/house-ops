@@ -19,6 +19,7 @@ interface VerbToolMatch {
 // --- Constants ---
 
 const CONFIDENCE_THRESHOLD = 0.85;
+const VERB_ONLY_PENALTY = 0.25;
 
 // --- Orchestrator ---
 
@@ -26,61 +27,84 @@ export async function classify(
   input: ClassifyInput,
   options: ClassifyOptions,
 ): Promise<ClassifyOutput> {
-  const match = await lookupVerbTool(
-    input.verb, input.entityTypes, options.householdId, options.supabase,
+  const rows = await fetchVerbRows(
+    input.verb, options.householdId, options.supabase,
   );
 
-  if (!match) {
+  if (rows.length === 0) {
     return buildFallbackOutput(input);
   }
 
-  return assessConfidence(match, input);
+  const subsetMatch = findSubsetMatch(rows, input.entityTypes);
+  if (subsetMatch) {
+    return assessConfidence(subsetMatch, input, false);
+  }
+
+  const verbOnlyMatch = findVerbOnlyMatch(rows);
+  if (verbOnlyMatch) {
+    return assessConfidence(verbOnlyMatch, input, true);
+  }
+
+  return buildFallbackOutput(input);
 }
 
-// --- Concept: query verb_tool_lookup with subset matching ---
-// Fetches all rows for verb+household, then filters in code:
-// row's entity_types must be a subset of input entity types.
-// Returns the most specific match (longest entity_types array).
+// --- Concept: fetch all verb_tool_lookup rows for verb+household ---
 
-async function lookupVerbTool(
+async function fetchVerbRows(
   verb: string,
-  inputEntityTypes: readonly EntityType[],
   householdId: number,
   supabase: SupabaseClient,
-): Promise<VerbToolMatch | null> {
+): Promise<VerbToolMatch[]> {
   const { data } = await supabase
     .from('verb_tool_lookup')
     .select('tool_name, confidence, entity_types')
     .eq('household_id', householdId)
     .eq('verb', verb);
 
-  const rows = (data ?? []) as VerbToolMatch[];
+  return (data ?? []) as VerbToolMatch[];
+}
+
+// --- Concept: subset matching — row's entity_types ⊆ input entity types ---
+
+function findSubsetMatch(
+  rows: VerbToolMatch[],
+  inputEntityTypes: readonly EntityType[],
+): VerbToolMatch | null {
   const inputSet = new Set(inputEntityTypes);
   const subsetMatches = rows.filter(row =>
     row.entity_types.every(type => inputSet.has(type as EntityType)),
   );
 
   if (subsetMatches.length === 0) return null;
-
   return selectMostSpecific(subsetMatches);
 }
 
+// --- Concept: verb-only fallback — pick shortest entity_types row ---
+// When no entity types resolved, fall back to the most general mapping
+// for this verb. Applies a confidence penalty since entity type is unverified.
+
+function findVerbOnlyMatch(rows: VerbToolMatch[]): VerbToolMatch | null {
+  if (rows.length === 0) return null;
+  return selectLeastSpecific(rows);
+}
+
 // --- Concept: assess confidence and determine routing ---
-// Degrades confidence when unresolved entities exceed what the tool expects.
-// Tools with empty entity_types (e.g., "remind" → create_action) don't need
-// resolved entities — unresolved mentions become VALUE params like title.
 
 function assessConfidence(
   match: VerbToolMatch,
   input: ClassifyInput,
+  verbOnlyFallback: boolean,
 ): ClassifyOutput {
   let confidence = match.confidence;
 
-  // Only degrade when unresolved entities would need to be resolved references.
-  // If the tool requires entity types, unresolved entities are a problem.
+  if (verbOnlyFallback) {
+    confidence *= (1 - VERB_ONLY_PENALTY);
+  }
+
+  // Degrade when unresolved entities would need to be resolved references.
   // If entity_types is empty, unresolved mentions are VALUE params (e.g., title).
   const requiredTypes = match.entity_types.length;
-  const excessUnresolved = requiredTypes > 0 ? input.unresolvedCount : 0;
+  const excessUnresolved = requiredTypes > 0 && !verbOnlyFallback ? input.unresolvedCount : 0;
 
   if (excessUnresolved > 0) {
     confidence *= 1 - (excessUnresolved * 0.15);
@@ -93,7 +117,9 @@ function assessConfidence(
     toolName: match.tool_name,
     confidence,
     needsLlm,
-    canAssemble: !needsLlm,
+    // Verb-only matches can still assemble — the unresolved entity
+    // will surface in the card for the user to confirm
+    canAssemble: !hasDuplicateTypes,
   };
 }
 
@@ -116,6 +142,14 @@ function buildFallbackOutput(input: ClassifyInput): ClassifyOutput {
 function selectMostSpecific(matches: VerbToolMatch[]): VerbToolMatch {
   return matches.reduce((best, current) =>
     current.entity_types.length > best.entity_types.length ? current : best,
+  );
+}
+
+// --- Leaf: select least specific match (shortest entity_types array) ---
+
+function selectLeastSpecific(matches: VerbToolMatch[]): VerbToolMatch {
+  return matches.reduce((best, current) =>
+    current.entity_types.length < best.entity_types.length ? current : best,
   );
 }
 
