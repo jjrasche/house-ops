@@ -3,6 +3,18 @@ import type {
   ResolvedEntity, ParsedDate, ParsedQuantity,
 } from './types';
 
+// --- Public types ---
+
+export interface ToolCallExample {
+  readonly verb: string;
+  readonly toolName: string;
+  readonly toolParams: Readonly<Record<string, unknown>>;
+}
+
+export interface AssembleOptions {
+  readonly toolCallExamples?: readonly ToolCallExample[];
+}
+
 // --- Constants ---
 
 const VERB_STATUS_MAP: Record<string, string> = {
@@ -16,11 +28,11 @@ const CONSUMPTION_VERBS = new Set(['used']);
 
 // --- Orchestrator ---
 
-export function assemble(input: AssembleInput): AssembleOutput {
+export function assemble(input: AssembleInput, options: AssembleOptions = {}): AssembleOutput {
   const params: Record<string, unknown> = {};
 
   mapEntityParams(params, input.resolved);
-  inferStatus(params, input.verb);
+  inferStatusFromExamplesOrMap(params, input.verb, input.toolName, options.toolCallExamples);
   mapQuantityParams(params, input.quantities, input.verb, params.status as string | undefined);
   mapDateParams(params, input.dates, input.toolName);
   mapTitleParam(params, input.toolName, input.unresolved);
@@ -40,14 +52,38 @@ function mapEntityParams(
   }
 }
 
-// --- Concept: infer item/action status from verb ---
+// --- Concept: infer status from trained examples first, then hardcoded map ---
 
-function inferStatus(
+function inferStatusFromExamplesOrMap(
   params: Record<string, unknown>,
   verb: string,
+  toolName: string,
+  examples?: readonly ToolCallExample[],
 ): void {
+  const exampleStatus = findExampleStatus(verb, toolName, examples);
+  if (exampleStatus !== undefined) {
+    params.status = exampleStatus;
+    return;
+  }
+
   const status = VERB_STATUS_MAP[verb];
   if (status) params.status = status;
+}
+
+// --- Concept: look up status from tool_call_examples ---
+
+function findExampleStatus(
+  verb: string,
+  toolName: string,
+  examples?: readonly ToolCallExample[],
+): unknown | undefined {
+  if (!examples || examples.length === 0) return undefined;
+
+  const match = examples.find(
+    ex => ex.verb === verb && ex.toolName === toolName,
+  );
+
+  return match?.toolParams.status;
 }
 
 // --- Concept: map quantities with verb-aware semantics ---

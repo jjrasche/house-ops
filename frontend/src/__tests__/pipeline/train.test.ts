@@ -159,6 +159,7 @@ describe('applyCorrection', () => {
       expect(exampleInsert!.payload).toEqual({
         household_id: 1,
         input_text: 'Buy milk',
+        verb: 'buy',
         tool_name: 'update_item',
         tool_params: { item_id: 1, status: 'needed' },
         source: 'user_confirmed',

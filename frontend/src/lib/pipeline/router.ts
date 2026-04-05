@@ -5,6 +5,7 @@ import type {
 } from './types';
 import type { LexiconEntry } from './extract';
 import type { ValidateOptions } from './validate';
+import type { ToolCallExample } from './assemble';
 import { extract } from './extract';
 import { resolve } from './resolve';
 import { classify } from './classify';
@@ -17,6 +18,7 @@ export interface PipelineOptions {
   readonly supabase: SupabaseClient;
   readonly householdId: number;
   readonly lexicon: readonly LexiconEntry[];
+  readonly toolCallExamples?: readonly ToolCallExample[];
   readonly referenceDate?: Date;
   readonly entityExists?: ValidateOptions['entityExists'];
   readonly conversationId?: number;
@@ -82,7 +84,7 @@ export async function runPipeline(
     quantities: extractResult.quantities,
   };
 
-  const assembleResult = assemble(assembleInput);
+  const assembleResult = assemble(assembleInput, { toolCallExamples: options.toolCallExamples });
 
   const validateResult = await recordExecutionAsync(
     executions, 'validate', conversationId, options.householdId,

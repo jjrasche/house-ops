@@ -1,8 +1,11 @@
-import type { PipelineResult, ResolvedEntity, ToolCall } from '../lib/pipeline/types';
+import { useState, useCallback } from 'react';
+import type { PipelineResult, ResolvedEntity, ToolCall, EntityType, Correction } from '../lib/pipeline/types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { StageSummary } from './stage-summary';
+import { StageCorrection } from './stage-correction';
+import { EntityResolver } from './entity-resolver';
 
 // --- Public types ---
 
@@ -10,6 +13,9 @@ export interface ConfirmationCardProps {
   readonly result: PipelineResult;
   readonly onConfirm: (toolCall: ToolCall) => void;
   readonly onReject: (toolCall: ToolCall) => void;
+  readonly onCorrect?: (correction: Correction) => void;
+  readonly onResolveEntity?: (mention: string, entityType: EntityType, entityName: string) => void;
+  readonly isResolvingEntity?: boolean;
 }
 
 // --- Constants ---
@@ -38,7 +44,13 @@ const PARAM_LABELS: Record<string, string> = {
 
 // --- Orchestrator ---
 
-export function ConfirmationCard({ result, onConfirm, onReject }: ConfirmationCardProps) {
+export function ConfirmationCard({
+  result, onConfirm, onReject, onCorrect, onResolveEntity, isResolvingEntity,
+}: ConfirmationCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+
+  const toggleEdit = useCallback(() => setIsEditing(prev => !prev), []);
+
   if (result.toolCalls.length === 0) {
     return <EmptyCard path={result.path} />;
   }
@@ -56,8 +68,20 @@ export function ConfirmationCard({ result, onConfirm, onReject }: ConfirmationCa
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <StageSummary trace={result.trace} />
-        {hasUnresolved && <UnresolvedWarning mentions={result.unresolved} />}
+        {isEditing && onCorrect ? (
+          <StageCorrection trace={result.trace} onCorrect={onCorrect} />
+        ) : (
+          <StageSummary trace={result.trace} />
+        )}
+        {hasUnresolved && onResolveEntity ? (
+          <EntityResolver
+            mentions={result.unresolved}
+            onResolve={onResolveEntity}
+            isResolving={isResolvingEntity}
+          />
+        ) : hasUnresolved ? (
+          <UnresolvedWarning mentions={result.unresolved} />
+        ) : null}
         <hr className="border-border" />
         <ParamList params={toolCall.params} resolvedEntities={result.resolvedEntities} />
       </CardContent>
@@ -65,6 +89,11 @@ export function ConfirmationCard({ result, onConfirm, onReject }: ConfirmationCa
         <Button variant="default" onClick={() => onConfirm(toolCall)} disabled={hasErrors}>
           {hasErrors ? 'Needs resolution' : 'Confirm'}
         </Button>
+        {onCorrect && (
+          <Button variant="outline" onClick={toggleEdit}>
+            {isEditing ? 'Done' : 'Edit'}
+          </Button>
+        )}
         <Button variant="ghost" onClick={() => onReject(toolCall)}>Reject</Button>
       </CardFooter>
     </Card>

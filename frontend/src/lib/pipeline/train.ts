@@ -102,6 +102,7 @@ async function trainAssembleExample(
   await supabase.from('tool_call_examples').insert({
     household_id: householdId,
     input_text: trace.inputText,
+    verb: trace.verb,
     tool_name: trace.toolName,
     tool_params: correctedParams,
     source: 'user_confirmed',

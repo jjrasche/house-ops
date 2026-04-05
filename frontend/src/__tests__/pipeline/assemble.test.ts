@@ -197,6 +197,66 @@ describe('ASSEMBLE stage', () => {
     });
   });
 
+  describe('trainable status via tool_call_examples', () => {
+    it('uses example status when matching verb+tool found', () => {
+      const examples = [
+        { verb: 'buy', toolName: 'update_item', toolParams: { status: 'purchased' } },
+      ];
+      const output = assemble(
+        makeInput({
+          toolName: 'update_item',
+          verb: 'buy',
+          resolved: [resolved('milk', ITEMS.milk.id, 'item')],
+        }),
+        { toolCallExamples: examples },
+      );
+      expect(output.toolCalls[0]!.params.status).toBe('purchased');
+    });
+
+    it('falls back to hardcoded map when no example matches', () => {
+      const examples = [
+        { verb: 'need', toolName: 'update_item', toolParams: { status: 'on_list' } },
+      ];
+      const output = assemble(
+        makeInput({
+          toolName: 'update_item',
+          verb: 'buy',
+          resolved: [resolved('milk', ITEMS.milk.id, 'item')],
+        }),
+        { toolCallExamples: examples },
+      );
+      expect(output.toolCalls[0]!.params.status).toBe('on_list');
+    });
+
+    it('falls back to hardcoded map when examples are empty', () => {
+      const output = assemble(
+        makeInput({
+          toolName: 'update_item',
+          verb: 'buy',
+          resolved: [resolved('milk', ITEMS.milk.id, 'item')],
+        }),
+        { toolCallExamples: [] },
+      );
+      expect(output.toolCalls[0]!.params.status).toBe('on_list');
+    });
+
+    it('example overrides hardcoded map for same verb', () => {
+      const examples = [
+        { verb: 'add', toolName: 'update_item', toolParams: { status: 'needed' } },
+      ];
+      const output = assemble(
+        makeInput({
+          toolName: 'update_item',
+          verb: 'add',
+          resolved: [resolved('milk', ITEMS.milk.id, 'item')],
+        }),
+        { toolCallExamples: examples },
+      );
+      // Hardcoded map has 'add' → 'on_list', but example overrides to 'needed'
+      expect(output.toolCalls[0]!.params.status).toBe('needed');
+    });
+  });
+
   describe('output structure', () => {
     it('always returns exactly one tool call', () => {
       const output = assemble(makeInput({
