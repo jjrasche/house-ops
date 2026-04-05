@@ -185,6 +185,39 @@ export interface PipelineTrace {
   readonly params: Readonly<Record<string, unknown>>;
 }
 
+// --- Correction types (user edits to pipeline output) ---
+
+export type CorrectionStage = 'extract' | 'resolve' | 'classify' | 'assemble';
+
+export interface ExtractCorrection {
+  readonly stage: 'extract';
+  readonly verb?: string;
+  readonly addedAlias?: { readonly surfaceForm: string; readonly entityType: EntityType; readonly entityId: number };
+}
+
+export interface ResolveCorrection {
+  readonly stage: 'resolve';
+  readonly mention: string;
+  readonly preferredId: number;
+  readonly preferredType: EntityType;
+}
+
+export interface ClassifyCorrection {
+  readonly stage: 'classify';
+  readonly toolName: string;
+}
+
+export interface AssembleCorrection {
+  readonly stage: 'assemble';
+  readonly params: Readonly<Record<string, unknown>>;
+}
+
+export type Correction =
+  | ExtractCorrection
+  | ResolveCorrection
+  | ClassifyCorrection
+  | AssembleCorrection;
+
 // --- Pipeline result ---
 
 export interface PipelineResult {

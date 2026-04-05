@@ -129,6 +129,25 @@ async function persistStageExecutions(
   await supabase.from('stage_executions').insert(rows);
 }
 
+// --- Concept: log rejection to action_log ---
+
+export async function rejectTool(
+  toolCall: ToolCall,
+  pipelineResult: PipelineResult,
+  options: ExecuteOptions,
+): Promise<void> {
+  await options.supabase.from('action_log').insert({
+    household_id: options.householdId,
+    user_id: options.userId ?? null,
+    conversation_id: options.conversationId ?? null,
+    tool_name: toolCall.tool,
+    tool_params: toolCall.params,
+    status: 'rejected',
+    pipeline_path: pipelineResult.path,
+    confidence: pipelineResult.confidence,
+  });
+}
+
 // --- Leaf: remove ID param from update payload ---
 
 function separateIdFromPayload(

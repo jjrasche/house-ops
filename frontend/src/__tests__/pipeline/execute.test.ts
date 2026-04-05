@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PipelineResult, ToolCall, StageExecution } from '../../lib/pipeline/types';
-import { executeTool } from '../../lib/pipeline/execute';
+import { executeTool, rejectTool } from '../../lib/pipeline/execute';
 
 // --- Mock Supabase that tracks mutations ---
 
@@ -289,6 +289,27 @@ describe('executeTool', () => {
 
       expect(outcome.success).toBe(false);
       expect(outcome.error).toContain('unknown_tool');
+    });
+  });
+
+  describe('rejectTool', () => {
+    it('logs rejection to action_log with status rejected', async () => {
+      const { supabase, mutations } = createMutationTracker();
+      const toolCall: ToolCall = { tool: 'update_item', params: { item_id: 1, status: 'on_list' } };
+      const result = buildPipelineResult({ toolCalls: [toolCall], confidence: 0.92, path: 'deterministic' });
+
+      await rejectTool(toolCall, result, { ...DEFAULT_OPTIONS, supabase });
+
+      const logMutation = mutations.find(m => m.table === 'action_log');
+      expect(logMutation).toBeDefined();
+      expect(logMutation!.payload).toMatchObject({
+        household_id: 1,
+        tool_name: 'update_item',
+        tool_params: { item_id: 1, status: 'on_list' },
+        status: 'rejected',
+        pipeline_path: 'deterministic',
+        confidence: 0.92,
+      });
     });
   });
 });
