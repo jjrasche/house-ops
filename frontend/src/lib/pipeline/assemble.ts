@@ -1,5 +1,5 @@
 import type {
-  AssembleInput, AssembleOutput, ToolCall,
+  AssembleInput, AssembleOutput,
   ResolvedEntity, ParsedDate, ParsedQuantity,
 } from './types';
 

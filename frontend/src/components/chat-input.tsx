@@ -132,7 +132,7 @@ export function ChatInput({
   );
 
   const handleResolveEntity = useCallback(
-    async (mention: string, entityType: EntityType, entityName: string) => {
+    async (_mention: string, entityType: EntityType, entityName: string) => {
       setIsResolvingEntity(true);
       try {
         await createEntity(entityType, entityName, createEntityOptions);
