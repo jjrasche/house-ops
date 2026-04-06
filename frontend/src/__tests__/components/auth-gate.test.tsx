@@ -10,6 +10,7 @@ const mockOnAuthStateChange = vi.fn();
 const mockSignInWithOtp = vi.fn();
 
 vi.mock('../../lib/supabase', () => ({
+  isLocalDev: false,
   supabase: {
     auth: {
       getSession: () => mockGetSession(),

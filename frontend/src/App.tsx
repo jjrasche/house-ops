@@ -7,7 +7,7 @@ import { executeTool, rejectTool } from './lib/pipeline/execute';
 import { ChatInput } from './components/chat-input';
 import { Login } from './components/login';
 import { useAuth } from './lib/auth/use-auth';
-import { supabase } from './lib/supabase';
+import { supabase, isLocalDev } from './lib/supabase';
 
 const HOUSEHOLD_ID = 1;
 
@@ -50,13 +50,15 @@ export default function App() {
     return loadToolCallExamples().then(setToolCallExamples);
   }, []);
 
+  const isAuthenticated = isLocalDev || authState.status === 'authenticated';
+
   useEffect(() => {
-    if (authState.status !== 'authenticated') return;
+    if (!isAuthenticated) return;
     refreshLexicon();
     refreshExamples();
-  }, [authState.status, refreshLexicon, refreshExamples]);
+  }, [isAuthenticated, refreshLexicon, refreshExamples]);
 
-  if (authState.status === 'loading') {
+  if (!isLocalDev && authState.status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -64,7 +66,7 @@ export default function App() {
     );
   }
 
-  if (authState.status === 'unauthenticated') {
+  if (!isLocalDev && authState.status === 'unauthenticated') {
     return <Login />;
   }
 
