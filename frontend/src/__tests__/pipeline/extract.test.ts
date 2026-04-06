@@ -96,6 +96,55 @@ describe('EXTRACT stage', () => {
     });
   });
 
+  describe('verb boundary matching', () => {
+    it.each([
+      ['I needed more milk', 'needed'],
+      ['She needs paper towels', 'needs'],
+      ['We finished cleaning', 'finished'],
+      ['They have eggs', 'have'],
+      ['We added it already', 'added'],
+    ] as const)(
+      '"%s" extracts verb=%s (word boundary, not substring)',
+      (text, expectedVerb) => {
+        const output = runExtract(text);
+        expect(output.verb).toBe(expectedVerb);
+      },
+    );
+
+    it('"needed" must not match "need"', () => {
+      const output = runExtract('I needed more milk');
+      expect(output.verb).not.toBe('need');
+    });
+  });
+
+  describe('multiple quantity extraction', () => {
+    it('extracts all quantities from "buy 2 rolls of paper towels and 3 bags of chips"', () => {
+      const output = runExtract('buy 2 rolls of paper towels and 3 bags of chips');
+      expect(output.quantities).toHaveLength(2);
+      expect(output.quantities).toContainEqual({ value: 2, unit: 'roll' });
+      expect(output.quantities).toContainEqual({ value: 3, unit: 'bag' });
+    });
+
+    it('extracts all quantities from "pick up 5 boxes of cereal and 10 rolls of toilet paper"', () => {
+      const output = runExtract('pick up 5 boxes of cereal and 10 rolls of toilet paper');
+      expect(output.quantities).toHaveLength(2);
+      expect(output.quantities).toContainEqual({ value: 5, unit: 'box' });
+      expect(output.quantities).toContainEqual({ value: 10, unit: 'roll' });
+    });
+  });
+
+  describe('no-verb input', () => {
+    it('"milk" returns empty verb', () => {
+      const output = runExtract('milk');
+      expect(output.verb).toBe('');
+    });
+
+    it('"milk" still extracts entity mention', () => {
+      const output = runExtract('milk');
+      expect(output.entityMentions).toContainEqual({ text: 'milk', typeHint: 'item' });
+    });
+  });
+
   describe('negative entity extraction', () => {
     it('"Add milk to the shopping list" does not extract "shopping list" as entity', () => {
       const output = runExtract('Add milk to the shopping list');

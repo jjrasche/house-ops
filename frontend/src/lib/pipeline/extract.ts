@@ -37,7 +37,7 @@ const WORD_NUMBERS: Record<string, number> = {
 };
 
 const QUANTITY_PATTERN =
-  /(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(box(?:es)?|roll(?:s)?|bag(?:s)?|count|gallon(?:s)?|pound(?:s)?|lb(?:s)?|oz|minutes?|dozen)/i;
+  /(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(box(?:es)?|roll(?:s)?|bag(?:s)?|count|gallon(?:s)?|pound(?:s)?|lb(?:s)?|oz|minutes?|dozen)/gi;
 
 const IMPLICIT_ONE_PATTERN = /\bone\s+of\s+the\b/i;
 
@@ -69,7 +69,7 @@ export function extract(input: ExtractInput, options: ExtractOptions): ExtractOu
   const { text } = input;
   const { lexicon, referenceDate = new Date() } = options;
 
-  const verb = extractVerb(text);
+  const verb = extractVerb(text, lexicon);
   const dates = extractDates(text, referenceDate);
   const quantities = extractQuantities(text);
   const entityMentions = extractEntityMentions(text, lexicon, verb, dates);
@@ -81,20 +81,25 @@ export function extract(input: ExtractInput, options: ExtractOptions): ExtractOu
 // Scans for known multi-word phrases, then single verbs.
 // Falls back to compromise POS for novel verbs not in lookup table.
 
-function extractVerb(text: string): string {
+function extractVerb(text: string, lexicon: readonly LexiconEntry[]): string {
   const lower = text.toLowerCase();
 
   for (const phrase of VERB_PHRASES) {
-    if (lower.includes(phrase)) return phrase;
+    if (matchesWordBoundary(lower, phrase)) return phrase;
   }
 
   for (const verb of KNOWN_VERBS) {
-    if (lower.includes(verb)) return verb;
+    if (matchesWordBoundary(lower, verb)) return verb;
   }
 
   const doc = nlp(text);
   const verbs = doc.verbs().out('array') as string[];
-  if (verbs.length > 0) return verbs[0]!.toLowerCase();
+  const lexiconNames = new Set(lexicon.map(e => e.name.toLowerCase()));
+
+  for (const verb of verbs) {
+    const verbLower = verb.toLowerCase();
+    if (!lexiconNames.has(verbLower)) return verbLower;
+  }
 
   return '';
 }
@@ -159,8 +164,9 @@ function stripKnownContent(
   }
 
   // Strip quantity expressions (re-detect from remaining text)
-  const quantityMatch = remaining.match(QUANTITY_PATTERN);
-  if (quantityMatch) remaining = remaining.replace(quantityMatch[0], ' ');
+  for (const quantityMatch of remaining.matchAll(QUANTITY_PATTERN)) {
+    remaining = remaining.replace(quantityMatch[0], ' ');
+  }
   const implicitMatch = remaining.match(IMPLICIT_ONE_PATTERN);
   if (implicitMatch) remaining = remaining.replace(implicitMatch[0], ' ');
 
@@ -244,11 +250,13 @@ function refineChronoResult(
 // --- Concept: quantity extraction via regex ---
 
 function extractQuantities(text: string): ParsedQuantity[] {
-  const match = text.match(QUANTITY_PATTERN);
-  if (match) {
-    const rawValue = match[1]!.toLowerCase();
-    const value = WORD_NUMBERS[rawValue] ?? parseInt(rawValue, 10);
-    return [{ value, unit: normalizeUnit(match[2]!) }];
+  const matches = [...text.matchAll(QUANTITY_PATTERN)];
+  if (matches.length > 0) {
+    return matches.map(match => {
+      const rawValue = match[1]!.toLowerCase();
+      const value = WORD_NUMBERS[rawValue] ?? parseInt(rawValue, 10);
+      return { value, unit: normalizeUnit(match[2]!) };
+    });
   }
 
   if (IMPLICIT_ONE_PATTERN.test(text)) return [{ value: 1, unit: 'count' }];
@@ -284,6 +292,13 @@ function normalizeUnit(raw: string): string {
   if (lower.startsWith('bag')) return 'bag';
   if (lower.startsWith('minute')) return 'minutes';
   return lower;
+}
+
+// --- Leaf: word-boundary match ---
+// Prevents "needed" from matching "need" or "add" from matching "added".
+
+function matchesWordBoundary(text: string, word: string): boolean {
+  return new RegExp(`\\b${word}\\b`).test(text);
 }
 
 // --- Leaf: strip leading articles ---

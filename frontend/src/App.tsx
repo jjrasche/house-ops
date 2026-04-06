@@ -5,13 +5,9 @@ import type { LexiconEntry } from './lib/pipeline/extract';
 import type { ToolCallExample } from './lib/pipeline/assemble';
 import { executeTool, rejectTool } from './lib/pipeline/execute';
 import { ChatInput } from './components/chat-input';
-import { createClient } from '@supabase/supabase-js';
-
-// Supabase client — local dev defaults, swapped via env in production
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL ?? 'http://127.0.0.1:54421',
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH',
-);
+import { Login } from './components/login';
+import { useAuth } from './lib/auth/use-auth';
+import { supabase } from './lib/supabase';
 
 const HOUSEHOLD_ID = 1;
 
@@ -42,6 +38,7 @@ async function loadToolCallExamples(): Promise<ToolCallExample[]> {
 }
 
 export default function App() {
+  const authState = useAuth();
   const [lexicon, setLexicon] = useState<LexiconEntry[]>([]);
   const [toolCallExamples, setToolCallExamples] = useState<ToolCallExample[]>([]);
 
@@ -54,9 +51,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (authState.status !== 'authenticated') return;
     refreshLexicon();
     refreshExamples();
-  }, [refreshLexicon, refreshExamples]);
+  }, [authState.status, refreshLexicon, refreshExamples]);
+
+  if (authState.status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
+  if (authState.status === 'unauthenticated') {
+    return <Login />;
+  }
 
   const pipelineOptions: PipelineOptions = {
     supabase,
@@ -68,14 +78,13 @@ export default function App() {
   const createEntityOptions = { supabase, householdId: HOUSEHOLD_ID };
   const trainOptions = { supabase, householdId: HOUSEHOLD_ID };
 
-  const handleExecute = useCallback(async (toolCall: ToolCall, pipelineResult: PipelineResult) => {
-    const result = await executeTool(toolCall, pipelineResult, { supabase, householdId: HOUSEHOLD_ID });
-    return result;
-  }, []);
+  const handleExecute = async (toolCall: ToolCall, pipelineResult: PipelineResult) => {
+    return executeTool(toolCall, pipelineResult, { supabase, householdId: HOUSEHOLD_ID });
+  };
 
-  const handleReject = useCallback(async (toolCall: ToolCall, pipelineResult: PipelineResult) => {
+  const handleReject = async (toolCall: ToolCall, pipelineResult: PipelineResult) => {
     await rejectTool(toolCall, pipelineResult, { supabase, householdId: HOUSEHOLD_ID });
-  }, []);
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">

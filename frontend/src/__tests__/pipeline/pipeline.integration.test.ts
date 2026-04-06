@@ -71,6 +71,37 @@ describe('Pipeline integration (wired stages)', () => {
       expect(result.path).toBe('llm');
       expect(result.toolCalls).toHaveLength(0);
     });
+
+    it('"organize the garage" routes to LLM (unknown verb)', async () => {
+      const result = await runPipeline('organize the garage', pipelineOptions);
+      expect(result.path).toBe('llm');
+      expect(result.toolCalls).toHaveLength(0);
+      expect(result.trace.verb).toBe('organize');
+    });
+
+    it('"milk" routes to LLM (no verb, bare noun)', async () => {
+      const result = await runPipeline('milk', pipelineOptions);
+      expect(result.path).toBe('llm');
+      expect(result.toolCalls).toHaveLength(0);
+      expect(result.trace.verb).toBe('');
+      expect(result.trace.entityMentions).toContainEqual({ text: 'milk', typeHint: 'item' });
+    });
+
+    it('"buy milk and milk" routes to LLM (duplicate same-type entities)', async () => {
+      const result = await runPipeline('buy milk and milk', pipelineOptions);
+      // Classify detects duplicate entity types → needsLlm
+      expect(result.path).toBe('llm');
+    });
+  });
+
+  describe('verb boundary correctness', () => {
+    it('"I needed more milk" does not match "need" verb', async () => {
+      const result = await runPipeline('I needed more milk', pipelineOptions);
+      // "needed" is not in verb_tool_lookup → LLM path
+      expect(result.trace.verb).toBe('needed');
+      expect(result.trace.verb).not.toBe('need');
+      expect(result.path).toBe('llm');
+    });
   });
 
   describe('tool call param correctness', () => {
@@ -125,6 +156,21 @@ describe('Pipeline integration (wired stages)', () => {
       const result = await runPipeline('Used one of the garbage bags', pipelineOptions);
       expect(result.toolCalls[0]?.params).toHaveProperty('quantity_delta', -1);
       expect(result.toolCalls[0]?.params).toHaveProperty('item_id', ITEMS.garbageBags.id);
+    });
+  });
+
+  describe('multi-entity extraction', () => {
+    it('"pick up cereal and dish soap from Costco" extracts all three entities', async () => {
+      const result = await runPipeline('pick up cereal and dish soap from Costco', pipelineOptions);
+      const mentionTexts = result.trace.entityMentions.map(m => m.text.toLowerCase());
+      expect(mentionTexts).toContain('cereal');
+      expect(mentionTexts).toContain('dish soap');
+      expect(mentionTexts).toContain('costco');
+    });
+
+    it('multiple quantities propagate through pipeline', async () => {
+      const result = await runPipeline('buy 2 rolls of paper towels and 3 bags of cereal', pipelineOptions);
+      expect(result.trace.entityMentions.length).toBeGreaterThanOrEqual(2);
     });
   });
 });
