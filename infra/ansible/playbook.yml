@@ -91,6 +91,22 @@
         dest: "{{ supabase_dir }}/docker/volumes/caddy/Caddyfile"
         mode: "0644"
 
+    # ── Frontend ──────────────────────────────────
+    - name: Create frontend directory
+      file:
+        path: "{{ houseops_dir }}/frontend"
+        state: directory
+        mode: "0755"
+
+    - name: Copy frontend source
+      synchronize:
+        src: "{{ playbook_dir }}/../../frontend/"
+        dest: "{{ houseops_dir }}/frontend/"
+        delete: true
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=dist"
+
     # ── Deploy ────────────────────────────────────
     - name: Pull Supabase images
       community.docker.docker_compose_v2:

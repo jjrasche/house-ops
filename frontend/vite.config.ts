@@ -7,6 +7,14 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
   },
+  server: {
+    host: true,
+    // To enable HTTPS for local phone testing, run:
+    //   npm install -D @vitejs/plugin-basic-ssl
+    // then uncomment:
+    //   import basicSsl from '@vitejs/plugin-basic-ssl'
+    //   and add basicSsl() to plugins array below
+  },
   plugins: [
     tailwindcss(),
     react(),

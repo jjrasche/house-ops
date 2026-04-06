@@ -1,9 +1,21 @@
 # Overrides for Supabase self-hosted:
 # - Adds Caddy reverse proxy for automatic HTTPS
+# - Adds HouseOps frontend (static React PWA)
 # - Removes analytics (logflare, vector) and imgproxy
 # - Unexposes Kong ports (Caddy handles external traffic)
 
 services:
+  frontend:
+    build:
+      context: "{{ houseops_dir }}/frontend"
+      args:
+        VITE_SUPABASE_URL: "https://{{ domain }}"
+        VITE_SUPABASE_ANON_KEY: "{{ anon_key }}"
+        VITE_DEEPGRAM_API_KEY: "{{ deepgram_api_key }}"
+    restart: unless-stopped
+    networks:
+      - default
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -18,6 +30,7 @@ services:
     depends_on:
       - kong
       - studio
+      - frontend
     networks:
       - default
 

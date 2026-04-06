@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { PipelineResult, ToolCall, EntityType, Correction } from '../lib/pipeline/types';
 import type { ExecuteResult } from '../lib/pipeline/execute';
 import type { PipelineOptions } from '../lib/pipeline/router';
@@ -9,6 +9,8 @@ import { createEntity } from '../lib/pipeline/create-entity';
 import { applyCorrection } from '../lib/pipeline/train';
 import { findCandidates } from '../lib/pipeline/resolve';
 import { ConfirmationCard } from './confirmation-card';
+import { useDeepgramSTT } from '../lib/voice/use-deepgram-stt';
+import type { ListeningState } from '../lib/voice/use-deepgram-stt';
 
 // --- Public types ---
 
@@ -35,10 +37,13 @@ export function ChatInput({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isResolvingEntity, setIsResolvingEntity] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [voiceMode, setVoiceMode] = useState(false);
 
-  const submitText = useCallback(async () => {
-    const trimmed = inputText.trim();
-    if (trimmed === '' || isProcessing) return;
+  const pendingRestartRef = useRef(false);
+
+  const submitTextDirect = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (trimmed === '') return;
 
     setIsProcessing(true);
     setResult(null);
@@ -47,7 +52,46 @@ export function ChatInput({
     const pipelineResult = await runPipeline(trimmed, pipelineOptions);
     setResult(pipelineResult);
     setIsProcessing(false);
-  }, [inputText, isProcessing, pipelineOptions]);
+  }, [pipelineOptions]);
+
+  const submitText = useCallback(async () => {
+    await submitTextDirect(inputText);
+  }, [inputText, submitTextDirect]);
+
+  // --- Voice: Deepgram STT ---
+
+  const handleVoiceTranscript = useCallback((transcript: string) => {
+    setInputText(transcript);
+    submitTextDirect(transcript);
+  }, [submitTextDirect]);
+
+  const handleVoiceInterim = useCallback((interim: string) => {
+    setInputText(interim);
+  }, []);
+
+  const { state: listeningState, startListening, stopListening } = useDeepgramSTT({
+    onTranscript: handleVoiceTranscript,
+    onInterim: handleVoiceInterim,
+    endpointingMs: 1000,
+  });
+
+  const toggleVoice = useCallback(() => {
+    if (listeningState !== 'idle') {
+      stopListening();
+      setVoiceMode(false);
+    } else {
+      startListening();
+      setVoiceMode(true);
+    }
+  }, [listeningState, startListening, stopListening]);
+
+  // Auto-restart mic after confirm/reject in voice mode
+  useEffect(() => {
+    if (pendingRestartRef.current && !isProcessing && !result && listeningState === 'idle' && voiceMode) {
+      pendingRestartRef.current = false;
+      startListening();
+    }
+  }, [isProcessing, result, listeningState, voiceMode, startListening]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
@@ -67,11 +111,12 @@ export function ChatInput({
       if (executeResult.success) {
         setFeedback({ kind: 'success' });
         setInputText('');
+        if (voiceMode) pendingRestartRef.current = true;
       } else {
         setFeedback({ kind: 'error', message: executeResult.error ?? 'Execution failed' });
       }
     },
-    [onExecute, result],
+    [onExecute, result, voiceMode],
   );
 
   const handleReject = useCallback(
@@ -80,8 +125,10 @@ export function ChatInput({
       onReject(toolCall, result);
       setResult(null);
       setFeedback(null);
+      setInputText('');
+      if (voiceMode) pendingRestartRef.current = true;
     },
-    [onReject, result],
+    [onReject, result, voiceMode],
   );
 
   const handleResolveEntity = useCallback(
@@ -123,6 +170,8 @@ export function ChatInput({
     [result, trainOptions, inputText, pipelineOptions, onLexiconChanged],
   );
 
+  const hasDeepgramKey = Boolean(import.meta.env.VITE_DEEPGRAM_API_KEY);
+
   return (
     <div className="flex flex-col gap-4 w-full max-w-md">
       <div className="flex gap-2">
@@ -131,17 +180,20 @@ export function ChatInput({
           value={inputText}
           onChange={(event) => setInputText(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="What do you need?"
-          disabled={isProcessing}
+          placeholder={listeningState === 'listening' ? 'Listening...' : 'What do you need?'}
+          disabled={isProcessing || listeningState === 'listening'}
           className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
         />
+        {hasDeepgramKey && (
+          <MicButton state={listeningState} onClick={toggleVoice} disabled={isProcessing} />
+        )}
         <button
           type="button"
           onClick={submitText}
           disabled={isProcessing || inputText.trim() === ''}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {isProcessing ? 'Thinking...' : 'Send'}
+          {isProcessing ? '...' : 'Send'}
         </button>
       </div>
 
@@ -164,5 +216,34 @@ export function ChatInput({
         <p className="text-sm text-destructive" role="alert">{feedback.message}</p>
       )}
     </div>
+  );
+}
+
+// --- Concept: microphone toggle button with state-dependent styling ---
+
+interface MicButtonProps {
+  readonly state: ListeningState;
+  readonly onClick: () => void;
+  readonly disabled: boolean;
+}
+
+function MicButton({ state, onClick, disabled }: MicButtonProps) {
+  const isActive = state === 'listening';
+  const isConnecting = state === 'connecting';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || isConnecting}
+      aria-label={isActive ? 'Stop listening' : 'Start voice input'}
+      className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        isActive
+          ? 'bg-red-500 text-white animate-pulse'
+          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+      } disabled:opacity-50`}
+    >
+      {isConnecting ? '...' : '🎤'}
+    </button>
   );
 }

@@ -26,6 +26,14 @@ vi.mock('../../lib/pipeline/create-entity', () => ({
   createEntity: vi.fn().mockResolvedValue({ entityId: 99, entityType: 'item', name: 'Test' }),
 }));
 
+vi.mock('../../lib/voice/use-deepgram-stt', () => ({
+  useDeepgramSTT: () => ({
+    state: 'idle',
+    startListening: vi.fn(),
+    stopListening: vi.fn(),
+  }),
+}));
+
 afterEach(cleanup);
 
 // --- Test data ---

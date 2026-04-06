@@ -1,3 +1,7 @@
+app.{{ domain }} {
+    reverse_proxy frontend:3001
+}
+
 {{ domain }} {
     handle /rest/v1/* {
         reverse_proxy kong:8000
