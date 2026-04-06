@@ -12,8 +12,8 @@ import { EntityResolver } from './entity-resolver';
 
 export interface ConfirmationCardProps {
   readonly result: PipelineResult;
-  readonly onConfirm: (toolCall: ToolCall) => void;
-  readonly onReject: (toolCall: ToolCall) => void;
+  readonly onConfirm: (toolCalls: readonly ToolCall[]) => void;
+  readonly onReject: (toolCalls: readonly ToolCall[]) => void;
   readonly onCorrect?: (correction: Correction) => void;
   readonly onResolveEntity?: (mention: string, entityType: EntityType, entityName: string) => void;
   readonly isResolvingEntity?: boolean;
@@ -23,9 +23,11 @@ export interface ConfirmationCardProps {
 // --- Constants ---
 
 const TOOL_LABELS: Record<string, string> = {
-  update_item_status: 'Update item',
+  update_item: 'Update item',
+  create_item: 'Create item',
   create_action: 'Create action',
   update_action: 'Update action',
+  create_recipe: 'Create recipe',
 };
 
 const PARAM_LABELS: Record<string, string> = {
@@ -57,7 +59,7 @@ export function ConfirmationCard({
     return <EmptyCard path={result.path} />;
   }
 
-  const toolCall = result.toolCalls[0]!;
+  const toolCalls = result.toolCalls;
   const hasUnresolved = result.unresolved.length > 0;
   const hasErrors = result.validationErrors.length > 0;
 
@@ -65,7 +67,10 @@ export function ConfirmationCard({
     <Card className="w-full max-w-md">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>{formatToolLabel(toolCall.tool)}</CardTitle>
+          <CardTitle>
+            {formatToolLabel(toolCalls[0]!.tool)}
+            {toolCalls.length > 1 && ` (×${toolCalls.length})`}
+          </CardTitle>
           <ConfidenceBadge confidence={result.confidence} />
         </div>
       </CardHeader>
@@ -85,10 +90,12 @@ export function ConfirmationCard({
           <UnresolvedWarning mentions={result.unresolved} />
         ) : null}
         <hr className="border-border" />
-        <ParamList params={toolCall.params} resolvedEntities={result.resolvedEntities} />
+        {toolCalls.map((tc, i) => (
+          <ParamList key={i} params={tc.params} resolvedEntities={result.resolvedEntities} />
+        ))}
       </CardContent>
       <CardFooter className="gap-2">
-        <Button variant="default" onClick={() => onConfirm(toolCall)} disabled={hasErrors}>
+        <Button variant="default" onClick={() => onConfirm(toolCalls)} disabled={hasErrors}>
           {hasErrors ? 'Needs resolution' : 'Confirm'}
         </Button>
         {onCorrect && (
@@ -96,7 +103,7 @@ export function ConfirmationCard({
             {isEditing ? 'Done' : 'Edit'}
           </Button>
         )}
-        <Button variant="ghost" onClick={() => onReject(toolCall)}>Reject</Button>
+        <Button variant="ghost" onClick={() => onReject(toolCalls)}>Reject</Button>
       </CardFooter>
     </Card>
   );

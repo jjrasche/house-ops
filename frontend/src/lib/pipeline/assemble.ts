@@ -1,5 +1,5 @@
 import type {
-  AssembleInput, AssembleOutput,
+  AssembleInput, AssembleOutput, ToolCall,
   ResolvedEntity, ParsedDate, ParsedQuantity,
 } from './types';
 
@@ -29,26 +29,59 @@ const CONSUMPTION_VERBS = new Set(['used']);
 // --- Orchestrator ---
 
 export function assemble(input: AssembleInput, options: AssembleOptions = {}): AssembleOutput {
-  const params: Record<string, unknown> = {};
+  const sharedParams: Record<string, unknown> = {};
 
-  mapEntityParams(params, input.resolved);
-  inferStatusFromExamplesOrMap(params, input.verb, input.toolName, options.toolCallExamples);
-  mapQuantityParams(params, input.quantities, input.verb, params.status as string | undefined);
-  mapDateParams(params, input.dates, input.toolName);
-  mapTitleParam(params, input.toolName, input.unresolved);
+  inferStatusFromExamplesOrMap(sharedParams, input.verb, input.toolName, options.toolCallExamples);
+  mapQuantityParams(sharedParams, input.quantities, input.verb, sharedParams.status as string | undefined);
+  mapDateParams(sharedParams, input.dates, input.toolName);
+  mapTitleParam(sharedParams, input.toolName, input.unresolved);
 
-  return { toolCalls: [{ tool: input.toolName, params }] };
+  const toolCalls = expandByDuplicateType(input.toolName, sharedParams, input.resolved);
+
+  return { toolCalls };
 }
 
-// --- Concept: map resolved entities to typed parameter slots ---
+// --- Concept: expand into N tool calls when multiple entities share a type ---
+// Groups entities by type. If any type has >1 entity, produces one tool call per
+// entity in that type, sharing all other entity params and non-entity params.
 
-function mapEntityParams(
-  params: Record<string, unknown>,
+function expandByDuplicateType(
+  toolName: string,
+  sharedParams: Record<string, unknown>,
   resolved: readonly ResolvedEntity[],
+): ToolCall[] {
+  const byType = groupEntitiesByType(resolved);
+  const expansionType = findExpansionType(byType);
+
+  if (!expansionType) {
+    const params = { ...sharedParams };
+    mapSingletonEntities(params, byType);
+    return [{ tool: toolName, params }];
+  }
+
+  const singletonParams: Record<string, unknown> = {};
+  for (const [type, entities] of byType) {
+    if (type !== expansionType) {
+      const paramName = entityTypeToParam(type);
+      if (paramName) singletonParams[paramName] = entities[0]!.entityId;
+    }
+  }
+
+  return byType.get(expansionType)!.map(entity => {
+    const paramName = entityTypeToParam(entity.entityType)!;
+    return { tool: toolName, params: { ...sharedParams, ...singletonParams, [paramName]: entity.entityId } };
+  });
+}
+
+// --- Concept: map singleton entity groups (one entity per type) ---
+
+function mapSingletonEntities(
+  params: Record<string, unknown>,
+  byType: Map<string, ResolvedEntity[]>,
 ): void {
-  for (const entity of resolved) {
-    const paramName = entityTypeToParam(entity.entityType);
-    if (paramName) params[paramName] = entity.entityId;
+  for (const [, entities] of byType) {
+    const paramName = entityTypeToParam(entities[0]!.entityType);
+    if (paramName) params[paramName] = entities[0]!.entityId;
   }
 }
 
@@ -153,6 +186,27 @@ function entityTypeToParam(entityType: string): string | null {
     action: 'action_id',
   };
   return mapping[entityType] ?? null;
+}
+
+// --- Leaf: group resolved entities by type ---
+
+function groupEntitiesByType(resolved: readonly ResolvedEntity[]): Map<string, ResolvedEntity[]> {
+  const byType = new Map<string, ResolvedEntity[]>();
+  for (const entity of resolved) {
+    const group = byType.get(entity.entityType);
+    if (group) group.push(entity);
+    else byType.set(entity.entityType, [entity]);
+  }
+  return byType;
+}
+
+// --- Leaf: find the first entity type with >1 entity, or null ---
+
+function findExpansionType(byType: Map<string, ResolvedEntity[]>): string | null {
+  for (const [type, entities] of byType) {
+    if (entities.length > 1) return type;
+  }
+  return null;
 }
 
 // --- Leaf: capitalize first letter ---

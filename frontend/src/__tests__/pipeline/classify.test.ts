@@ -229,6 +229,50 @@ describe('CLASSIFY stage', () => {
     });
   });
 
+  describe('inflected verb lemmatization', () => {
+    it.each([
+      ['needed',     ['item'] as EntityType[],   'update_item'],
+      ['needs',      ['item'] as EntityType[],   'update_item'],
+      ['added',      ['item'] as EntityType[],   'update_item'],
+      ['adds',       ['item'] as EntityType[],   'update_item'],
+      ['buying',     ['item'] as EntityType[],   'update_item'],
+      ['buys',       ['item'] as EntityType[],   'update_item'],
+      ['scheduling', [] as EntityType[],         'create_action'],
+      ['reminded',   [] as EntityType[],         'create_action'],
+      ['saves',      [] as EntityType[],         'create_recipe'],
+    ])(
+      'inflected verb "%s" + types=%j → tool=%s via lemma fallback',
+      async (verb, entityTypes, expectedTool) => {
+        const output = await classify(
+          makeInput(verb, entityTypes),
+          makeOptions(),
+        );
+        expect(output.toolName).toBe(expectedTool);
+        expect(output.needsLlm).toBe(false);
+        expect(output.canShowCard).toBe(true);
+      },
+    );
+
+    it('lemma fallback does not override an exact surface match', async () => {
+      // "bought" exists in verb_tool_lookup as a surface form — should use it directly
+      const output = await classify(
+        makeInput('bought', ['item']),
+        makeOptions(),
+      );
+      expect(output.toolName).toBe('update_item');
+      expect(output.confidence).toBe(0.94); // exact seed confidence, not lemma's
+    });
+
+    it('unknown inflected verb still routes to LLM', async () => {
+      const output = await classify(
+        makeInput('juggling', ['item']),
+        makeOptions(),
+      );
+      expect(output.toolName).toBeNull();
+      expect(output.needsLlm).toBe(true);
+    });
+  });
+
   describe('household isolation', () => {
     it('household 2 mappings do not appear for household 1', async () => {
       const customSeed: VerbToolRow[] = [

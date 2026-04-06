@@ -14,14 +14,14 @@ import type { ListeningState } from '../lib/voice/use-deepgram-stt';
 
 // --- Public types ---
 
-export type ExecuteHandler = (toolCall: ToolCall, pipelineResult: PipelineResult) => Promise<ExecuteResult>;
+export type ExecuteHandler = (toolCalls: readonly ToolCall[], pipelineResult: PipelineResult) => Promise<ExecuteResult>;
 
 export interface ChatInputProps {
   readonly pipelineOptions: PipelineOptions;
   readonly createEntityOptions: CreateEntityOptions;
   readonly trainOptions: TrainOptions;
   readonly onExecute: ExecuteHandler;
-  readonly onReject: (toolCall: ToolCall, pipelineResult: PipelineResult) => void;
+  readonly onReject: (toolCalls: readonly ToolCall[], pipelineResult: PipelineResult) => void;
   readonly onLexiconChanged: () => void | Promise<unknown>;
 }
 
@@ -104,9 +104,9 @@ export function ChatInput({
   );
 
   const handleConfirm = useCallback(
-    async (toolCall: ToolCall) => {
+    async (toolCalls: readonly ToolCall[]) => {
       if (!result) return;
-      const executeResult = await onExecute(toolCall, result);
+      const executeResult = await onExecute(toolCalls, result);
       setResult(null);
       if (executeResult.success) {
         setFeedback({ kind: 'success' });
@@ -120,9 +120,9 @@ export function ChatInput({
   );
 
   const handleReject = useCallback(
-    (toolCall: ToolCall) => {
+    (toolCalls: readonly ToolCall[]) => {
       if (!result) return;
-      onReject(toolCall, result);
+      onReject(toolCalls, result);
       setResult(null);
       setFeedback(null);
       setInputText('');

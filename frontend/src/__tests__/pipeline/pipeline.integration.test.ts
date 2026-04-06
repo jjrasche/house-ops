@@ -95,12 +95,13 @@ describe('Pipeline integration (wired stages)', () => {
   });
 
   describe('verb boundary correctness', () => {
-    it('"I needed more milk" does not match "need" verb', async () => {
+    it('"I needed more milk" extracts "needed" and routes deterministically via lemma', async () => {
       const result = await runPipeline('I needed more milk', pipelineOptions);
-      // "needed" is not in verb_tool_lookup → LLM path
+      // "needed" extracted as surface form, classify lemmatizes to "need" for lookup
       expect(result.trace.verb).toBe('needed');
       expect(result.trace.verb).not.toBe('need');
-      expect(result.path).toBe('llm');
+      expect(result.path).toBe('deterministic');
+      expect(result.trace.toolName).toBe('update_item');
     });
   });
 

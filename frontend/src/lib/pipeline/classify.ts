@@ -21,6 +21,21 @@ interface VerbToolMatch {
 const CONFIDENCE_THRESHOLD = 0.85;
 const VERB_ONLY_PENALTY = 0.25;
 
+// Maps inflected surface forms to their base verb for verb_tool_lookup matching.
+// Only includes forms NOT already seeded in verb_tool_lookup (e.g., "bought" is
+// already a seed entry, so it doesn't need a lemma mapping here).
+const VERB_LEMMA_MAP: Readonly<Record<string, string>> = {
+  needed: 'need', needs: 'need',
+  added: 'add', adds: 'add', adding: 'add',
+  buys: 'buy', buying: 'buy',
+  reminded: 'remind', reminds: 'remind', reminding: 'remind',
+  scheduled: 'schedule', schedules: 'schedule', scheduling: 'schedule',
+  created: 'create', creates: 'create', creating: 'create',
+  saved: 'save', saves: 'save', saving: 'save',
+  finishes: 'finished', finishing: 'finished',
+  completes: 'completed', completing: 'completed',
+};
+
 // --- Orchestrator ---
 
 export async function classify(
@@ -48,9 +63,25 @@ export async function classify(
   return buildFallbackOutput(input);
 }
 
-// --- Concept: fetch all verb_tool_lookup rows for verb+household ---
+// --- Concept: fetch verb_tool_lookup rows, falling back to lemma form ---
 
 async function fetchVerbRows(
+  verb: string,
+  householdId: number,
+  supabase: SupabaseClient,
+): Promise<VerbToolMatch[]> {
+  const surfaceRows = await queryVerbRows(verb, householdId, supabase);
+  if (surfaceRows.length > 0) return surfaceRows;
+
+  const lemma = lemmatizeVerb(verb);
+  if (lemma === verb) return [];
+
+  return queryVerbRows(lemma, householdId, supabase);
+}
+
+// --- Concept: query verb_tool_lookup for a single verb ---
+
+async function queryVerbRows(
   verb: string,
   householdId: number,
   supabase: SupabaseClient,
@@ -62,6 +93,12 @@ async function fetchVerbRows(
     .eq('verb', verb);
 
   return (data ?? []) as VerbToolMatch[];
+}
+
+// --- Leaf: map inflected verb to base form ---
+
+function lemmatizeVerb(verb: string): string {
+  return VERB_LEMMA_MAP[verb] ?? verb;
 }
 
 // --- Concept: subset matching — row's entity_types ⊆ input entity types ---

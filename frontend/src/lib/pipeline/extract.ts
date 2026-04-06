@@ -23,12 +23,22 @@ export interface ExtractOptions {
 const VERB_PHRASES = ['pick up', 'out of'];
 
 // Single-word verbs recognized by the deterministic path.
-// Stored as surface forms (not lemmatized) because verb_tool_lookup
-// maps exact surface forms to tools.
+// Includes common inflections so they're caught without relying on
+// compromise POS. Classify handles lemmatization for DB lookup.
 const KNOWN_VERBS = [
-  'buy', 'bought', 'add', 'remind', 'schedule', 'need',
-  'have', 'has', 'had', 'used', 'finished', 'completed',
-  'save', 'are', 'is',
+  'buy', 'bought', 'buying', 'buys',
+  'add', 'added', 'adding', 'adds',
+  'need', 'needed', 'needs',
+  'have', 'has', 'had',
+  'used', 'uses',
+  'finished', 'finishes', 'finishing',
+  'completed', 'completes', 'completing',
+  'remind', 'reminded', 'reminds', 'reminding',
+  'schedule', 'scheduled', 'schedules', 'scheduling',
+  'save', 'saved', 'saves', 'saving',
+  'create', 'created', 'creates', 'creating',
+  'purchased',
+  'are', 'is',
 ];
 
 const WORD_NUMBERS: Record<string, number> = {

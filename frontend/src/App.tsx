@@ -80,12 +80,20 @@ export default function App() {
   const createEntityOptions = { supabase, householdId: HOUSEHOLD_ID };
   const trainOptions = { supabase, householdId: HOUSEHOLD_ID };
 
-  const handleExecute = async (toolCall: ToolCall, pipelineResult: PipelineResult) => {
-    return executeTool(toolCall, pipelineResult, { supabase, householdId: HOUSEHOLD_ID });
+  const handleExecute = async (toolCalls: readonly ToolCall[], pipelineResult: PipelineResult) => {
+    const options = { supabase, householdId: HOUSEHOLD_ID };
+    for (const toolCall of toolCalls) {
+      const result = await executeTool(toolCall, pipelineResult, options);
+      if (!result.success) return result;
+    }
+    return { success: true as const };
   };
 
-  const handleReject = async (toolCall: ToolCall, pipelineResult: PipelineResult) => {
-    await rejectTool(toolCall, pipelineResult, { supabase, householdId: HOUSEHOLD_ID });
+  const handleReject = async (toolCalls: readonly ToolCall[], pipelineResult: PipelineResult) => {
+    const options = { supabase, householdId: HOUSEHOLD_ID };
+    for (const toolCall of toolCalls) {
+      await rejectTool(toolCall, pipelineResult, options);
+    }
   };
 
   return (

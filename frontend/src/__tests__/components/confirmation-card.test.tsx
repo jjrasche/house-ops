@@ -20,7 +20,7 @@ const EMPTY_TRACE = {
 
 function buildResult(overrides: Partial<PipelineResult> = {}): PipelineResult {
   return {
-    toolCalls: [{ tool: 'update_item_status', params: { item_id: 1, status: 'on_list' } }],
+    toolCalls: [{ tool: 'update_item', params: { item_id: 1, status: 'on_list' } }],
     resolvedEntities: [],
     unresolved: [],
     trace: EMPTY_TRACE,
@@ -108,7 +108,7 @@ describe('ConfirmationCard', () => {
 
   it('renders entity mention instead of raw ID when resolved entity matches', () => {
     const result = buildResult({
-      toolCalls: [{ tool: 'update_item_status', params: { item_id: 1, status: 'on_list' } }],
+      toolCalls: [{ tool: 'update_item', params: { item_id: 1, status: 'on_list' } }],
       resolvedEntities: [{ mention: 'milk', entityId: 1, entityType: 'item', score: 0.95 }],
     });
     render(
@@ -120,7 +120,7 @@ describe('ConfirmationCard', () => {
 
   it('falls back to raw ID when no resolved entity matches', () => {
     const result = buildResult({
-      toolCalls: [{ tool: 'update_item_status', params: { item_id: 99, status: 'on_list' } }],
+      toolCalls: [{ tool: 'update_item', params: { item_id: 99, status: 'on_list' } }],
       resolvedEntities: [{ mention: 'milk', entityId: 1, entityType: 'item', score: 0.95 }],
     });
     render(
@@ -147,7 +147,7 @@ describe('ConfirmationCard', () => {
 
   it('does not resolve non-ID params even if they are numbers', () => {
     const result = buildResult({
-      toolCalls: [{ tool: 'update_item_status', params: { item_id: 1, quantity: 3 } }],
+      toolCalls: [{ tool: 'update_item', params: { item_id: 1, quantity: 3 } }],
       resolvedEntities: [{ mention: 'milk', entityId: 1, entityType: 'item', score: 0.95 }],
     });
     render(
@@ -195,7 +195,7 @@ describe('ConfirmationCard', () => {
 
   it('calls onConfirm with the tool call when Confirm clicked', async () => {
     const onConfirm = vi.fn();
-    const toolCall: ToolCall = { tool: 'update_item_status', params: { item_id: 1, status: 'on_list' } };
+    const toolCall: ToolCall = { tool: 'update_item', params: { item_id: 1, status: 'on_list' } };
     const result = buildResult({ toolCalls: [toolCall] });
 
     render(
@@ -204,12 +204,12 @@ describe('ConfirmationCard', () => {
 
     const confirmButton = screen.getByRole('button', { name: 'Confirm' });
     await userEvent.click(confirmButton);
-    expect(onConfirm).toHaveBeenCalledWith(toolCall);
+    expect(onConfirm).toHaveBeenCalledWith([toolCall]);
   });
 
   it('calls onReject with the tool call when Reject clicked', async () => {
     const onReject = vi.fn();
-    const toolCall: ToolCall = { tool: 'update_item_status', params: { item_id: 1, status: 'on_list' } };
+    const toolCall: ToolCall = { tool: 'update_item', params: { item_id: 1, status: 'on_list' } };
     const result = buildResult({ toolCalls: [toolCall] });
 
     render(
@@ -218,7 +218,7 @@ describe('ConfirmationCard', () => {
 
     const rejectButton = screen.getByRole('button', { name: 'Reject' });
     await userEvent.click(rejectButton);
-    expect(onReject).toHaveBeenCalledWith(toolCall);
+    expect(onReject).toHaveBeenCalledWith([toolCall]);
   });
 
   // --- Does not render confirm/reject for empty results ---

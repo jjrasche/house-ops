@@ -257,8 +257,63 @@ describe('ASSEMBLE stage', () => {
     });
   });
 
-  describe('output structure', () => {
-    it('always returns exactly one tool call', () => {
+  describe('multi-entity same-type expansion', () => {
+    it('two items produce two tool calls, each with its own item_id', () => {
+      const output = assemble(makeInput({
+        toolName: 'update_item',
+        verb: 'buy',
+        resolved: [
+          resolved('cereal', ITEMS.cereal.id, 'item'),
+          resolved('dish soap', ITEMS.dishSoap.id, 'item'),
+        ],
+      }));
+      expect(output.toolCalls).toHaveLength(2);
+      expect(output.toolCalls).toContainEqual(
+        expect.objectContaining({ tool: 'update_item', params: expect.objectContaining({ item_id: ITEMS.cereal.id }) }),
+      );
+      expect(output.toolCalls).toContainEqual(
+        expect.objectContaining({ tool: 'update_item', params: expect.objectContaining({ item_id: ITEMS.dishSoap.id }) }),
+      );
+    });
+
+    it('two items + store → each tool call gets its own item_id and shared store_id', () => {
+      const output = assemble(makeInput({
+        toolName: 'update_item',
+        verb: 'pick up',
+        resolved: [
+          resolved('cereal', ITEMS.cereal.id, 'item'),
+          resolved('dish soap', ITEMS.dishSoap.id, 'item'),
+          resolved('Costco', STORES.costco.id, 'store'),
+        ],
+      }));
+      expect(output.toolCalls).toHaveLength(2);
+      for (const tc of output.toolCalls) {
+        expect(tc.params).toHaveProperty('store_id', STORES.costco.id);
+        expect(tc.tool).toBe('update_item');
+      }
+      const itemIds = output.toolCalls.map(tc => tc.params.item_id);
+      expect(itemIds).toContain(ITEMS.cereal.id);
+      expect(itemIds).toContain(ITEMS.dishSoap.id);
+    });
+
+    it('two items + quantity → each tool call gets the quantity params', () => {
+      const output = assemble(makeInput({
+        toolName: 'update_item',
+        verb: 'buy',
+        resolved: [
+          resolved('cereal', ITEMS.cereal.id, 'item'),
+          resolved('dish soap', ITEMS.dishSoap.id, 'item'),
+        ],
+        quantities: [{ value: 2, unit: 'box' }],
+      }));
+      expect(output.toolCalls).toHaveLength(2);
+      for (const tc of output.toolCalls) {
+        expect(tc.params).toHaveProperty('quantity_needed', 2);
+        expect(tc.params).toHaveProperty('unit', 'box');
+      }
+    });
+
+    it('single item still produces one tool call', () => {
       const output = assemble(makeInput({
         toolName: 'update_item',
         verb: 'buy',
@@ -266,6 +321,22 @@ describe('ASSEMBLE stage', () => {
       }));
       expect(output.toolCalls).toHaveLength(1);
       expect(output.toolCalls[0]!.tool).toBe('update_item');
+    });
+
+    it('three different entity types produce one tool call with all params', () => {
+      const output = assemble(makeInput({
+        toolName: 'update_item',
+        verb: 'buy',
+        resolved: [
+          resolved('milk', ITEMS.milk.id, 'item'),
+          resolved('Costco', STORES.costco.id, 'store'),
+          resolved('Jim', PEOPLE.jim.id, 'person'),
+        ],
+      }));
+      expect(output.toolCalls).toHaveLength(1);
+      expect(output.toolCalls[0]!.params).toHaveProperty('item_id', ITEMS.milk.id);
+      expect(output.toolCalls[0]!.params).toHaveProperty('store_id', STORES.costco.id);
+      expect(output.toolCalls[0]!.params).toHaveProperty('person_id', PEOPLE.jim.id);
     });
   });
 });
