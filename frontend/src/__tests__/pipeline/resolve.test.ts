@@ -148,13 +148,15 @@ describe('findCandidates', () => {
     expect(candidates).toEqual([]);
   });
 
-  it('returns candidates with entityId, entityType, and score fields', async () => {
+  it('returns candidates with entityId, entityType, name, and score fields', async () => {
     const candidates = await findCandidates('Costco', 1, options);
     expect(candidates.length).toBeGreaterThanOrEqual(1);
     const first = candidates[0]!;
     expect(first).toHaveProperty('entityId');
     expect(first).toHaveProperty('entityType');
+    expect(first).toHaveProperty('name');
     expect(first).toHaveProperty('score');
     expect(first.entityId).toBe(STORES.costco.id);
+    expect(first.name).toBe(STORES.costco.name);
   });
 });

@@ -13,6 +13,7 @@ export interface ExecuteOptions {
 export interface ExecuteResult {
   readonly success: boolean;
   readonly error?: string;
+  readonly warnings?: readonly string[];
 }
 
 // --- Tool → table mapping ---
@@ -51,10 +52,11 @@ export async function executeTool(
     return mutationResult;
   }
 
-  await logExecution(options.supabase, toolCall, pipelineResult, options);
-  await persistStageExecutions(options.supabase, pipelineResult.stageExecutions);
+  const warnings = await collectLoggingWarnings(options.supabase, toolCall, pipelineResult, options);
 
-  return { success: true };
+  return warnings.length > 0
+    ? { success: true, warnings }
+    : { success: true };
 }
 
 // --- Concept: apply update mutation (separate ID from payload) ---
@@ -97,6 +99,26 @@ async function applyInsert(
     : { success: true };
 }
 
+// --- Concept: collect warnings from non-critical logging operations ---
+// Logging failures must not mask a successful mutation, but must be surfaced.
+
+async function collectLoggingWarnings(
+  supabase: SupabaseClient,
+  toolCall: ToolCall,
+  pipelineResult: PipelineResult,
+  options: ExecuteOptions,
+): Promise<string[]> {
+  const warnings: string[] = [];
+
+  const logError = await logExecution(supabase, toolCall, pipelineResult, options);
+  if (logError) warnings.push(logError);
+
+  const stageError = await persistStageExecutions(supabase, pipelineResult.stageExecutions);
+  if (stageError) warnings.push(stageError);
+
+  return warnings;
+}
+
 // --- Concept: log tool execution to action_log ---
 
 async function logExecution(
@@ -104,8 +126,8 @@ async function logExecution(
   toolCall: ToolCall,
   pipelineResult: PipelineResult,
   options: ExecuteOptions,
-): Promise<void> {
-  await supabase.from('action_log').insert({
+): Promise<string | null> {
+  const { error } = await supabase.from('action_log').insert({
     household_id: options.householdId,
     user_id: options.userId ?? null,
     conversation_id: options.conversationId ?? null,
@@ -115,6 +137,7 @@ async function logExecution(
     pipeline_path: pipelineResult.path,
     confidence: pipelineResult.confidence,
   });
+  return error ? `Logging failed on action_log: ${error.message}` : null;
 }
 
 // --- Concept: persist stage executions to DB ---
@@ -122,11 +145,12 @@ async function logExecution(
 async function persistStageExecutions(
   supabase: SupabaseClient,
   executions: readonly StageExecution[],
-): Promise<void> {
-  if (executions.length === 0) return;
+): Promise<string | null> {
+  if (executions.length === 0) return null;
 
   const rows = executions.map(formatStageRow);
-  await supabase.from('stage_executions').insert(rows);
+  const { error } = await supabase.from('stage_executions').insert(rows);
+  return error ? `Logging failed on stage_executions: ${error.message}` : null;
 }
 
 // --- Concept: log rejection to action_log ---
@@ -136,7 +160,7 @@ export async function rejectTool(
   pipelineResult: PipelineResult,
   options: ExecuteOptions,
 ): Promise<void> {
-  await options.supabase.from('action_log').insert({
+  const { error } = await options.supabase.from('action_log').insert({
     household_id: options.householdId,
     user_id: options.userId ?? null,
     conversation_id: options.conversationId ?? null,
@@ -146,6 +170,7 @@ export async function rejectTool(
     pipeline_path: pipelineResult.path,
     confidence: pipelineResult.confidence,
   });
+  if (error) throw new Error(`Rejection logging failed on action_log: ${error.message}`);
 }
 
 // --- Leaf: remove ID param from update payload ---

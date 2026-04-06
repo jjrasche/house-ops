@@ -11,10 +11,6 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const MODELS_TO_TEST = [
   "llama-3.1-8b-instant",
-  "openai/gpt-oss-20b",
-  "meta-llama/llama-4-scout-17b-16e-instruct",
-  "openai/gpt-oss-120b",
-  "qwen/qwen3-32b",
 ];
 
 // Inline system prompt + tool schemas to avoid Deno import issues

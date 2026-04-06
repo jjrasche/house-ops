@@ -179,8 +179,8 @@ describe('StageCorrection', () => {
 
   it('shows candidates after expanding resolve row', async () => {
     const candidates: ResolveCandidate[] = [
-      { entityId: 1, entityType: 'item', score: 0.95 },
-      { entityId: 10, entityType: 'person', score: 0.4 },
+      { entityId: 1, entityType: 'item', name: 'Milk', score: 0.95 },
+      { entityId: 10, entityType: 'person', name: 'Charlie', score: 0.4 },
     ];
     const fetchCandidates: FetchCandidates = vi.fn().mockResolvedValue(candidates);
 
@@ -194,8 +194,8 @@ describe('StageCorrection', () => {
 
   it('calls onCorrect with resolve correction when candidate selected', async () => {
     const candidates: ResolveCandidate[] = [
-      { entityId: 1, entityType: 'item', score: 0.95 },
-      { entityId: 10, entityType: 'person', score: 0.4 },
+      { entityId: 1, entityType: 'item', name: 'Milk', score: 0.95 },
+      { entityId: 10, entityType: 'person', name: 'Charlie', score: 0.4 },
     ];
     const fetchCandidates: FetchCandidates = vi.fn().mockResolvedValue(candidates);
     const onCorrect = vi.fn();

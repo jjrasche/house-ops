@@ -96,6 +96,7 @@ export function createMockSupabase(
         .map(row => ({
           entity_id: row.id,
           entity_type: row.entityType,
+          entity_name: row.name,
           score: calculateTrigramSimilarity(row.name, mention),
         }))
         .filter(m => m.score > threshold)

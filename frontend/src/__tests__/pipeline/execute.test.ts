@@ -12,36 +12,44 @@ interface MutationRecord {
   readonly filters: Record<string, unknown>;
 }
 
-function createMutationTracker() {
+function createMutationTracker(errorTable?: string) {
   const mutations: MutationRecord[] = [];
+
+  function buildResult(tbl: string) {
+    const willError = tbl === errorTable;
+    return willError
+      ? { data: null, error: { message: `Insert failed on ${tbl}` } }
+      : { data: null, error: null };
+  }
 
   const supabase = {
     from: (table: string) => {
-      let currentOp: 'insert' | 'update' = 'insert';
       let currentPayload: unknown = null;
       const filters: Record<string, unknown> = {};
 
       const chain = {
         insert: (payload: unknown) => {
-          currentOp = 'insert';
           currentPayload = payload;
           mutations.push({ table, operation: 'insert', payload, filters: {} });
           return {
             select: () => ({
-              single: () => Promise.resolve({ data: { id: 1 }, error: null }),
+              single: () => Promise.resolve(
+                table === errorTable
+                  ? { data: null, error: { message: `Insert failed on ${table}` } }
+                  : { data: { id: 1 }, error: null },
+              ),
               then: (
-                onFulfilled?: (v: { data: unknown[]; error: null }) => unknown,
+                onFulfilled?: (v: { data: unknown[]; error: unknown }) => unknown,
                 onRejected?: (r: unknown) => unknown,
-              ) => Promise.resolve({ data: [{ id: 1 }], error: null }).then(onFulfilled, onRejected),
+              ) => Promise.resolve({ data: [{ id: 1 }], ...buildResult(table) }).then(onFulfilled, onRejected),
             }),
             then: (
-              onFulfilled?: (v: { data: null; error: null }) => unknown,
+              onFulfilled?: (v: { data: null; error: unknown }) => unknown,
               onRejected?: (r: unknown) => unknown,
-            ) => Promise.resolve({ data: null, error: null }).then(onFulfilled, onRejected),
+            ) => Promise.resolve(buildResult(table)).then(onFulfilled, onRejected),
           };
         },
         update: (payload: unknown) => {
-          currentOp = 'update';
           currentPayload = payload;
           return {
             eq: (col: string, val: unknown) => {
@@ -49,12 +57,16 @@ function createMutationTracker() {
               mutations.push({ table, operation: 'update', payload: currentPayload, filters: { ...filters } });
               return {
                 select: () => ({
-                  single: () => Promise.resolve({ data: { id: val }, error: null }),
+                  single: () => Promise.resolve(
+                    table === errorTable
+                      ? { data: null, error: { message: `Update failed on ${table}` } }
+                      : { data: { id: val }, error: null },
+                  ),
                 }),
                 then: (
-                  onFulfilled?: (v: { data: null; error: null }) => unknown,
+                  onFulfilled?: (v: { data: null; error: unknown }) => unknown,
                   onRejected?: (r: unknown) => unknown,
-                ) => Promise.resolve({ data: null, error: null }).then(onFulfilled, onRejected),
+                ) => Promise.resolve(buildResult(table)).then(onFulfilled, onRejected),
               };
             },
           };
@@ -312,6 +324,43 @@ describe('executeTool', () => {
         pipeline_path: 'deterministic',
         confidence: 0.92,
       });
+    });
+
+    it('throws when action_log insert fails', async () => {
+      const { supabase } = createMutationTracker('action_log');
+      const toolCall: ToolCall = { tool: 'update_item', params: { item_id: 1, status: 'on_list' } };
+      const result = buildPipelineResult({ toolCalls: [toolCall] });
+
+      await expect(
+        rejectTool(toolCall, result, { ...DEFAULT_OPTIONS, supabase }),
+      ).rejects.toThrow('action_log');
+    });
+  });
+
+  describe('error propagation — logging', () => {
+    it('returns warnings when action_log insert fails after successful mutation', async () => {
+      const { supabase } = createMutationTracker('action_log');
+      const toolCall: ToolCall = { tool: 'update_item', params: { item_id: 1, status: 'on_list' } };
+      const result = buildPipelineResult({ toolCalls: [toolCall] });
+
+      const outcome = await executeTool(toolCall, result, { ...DEFAULT_OPTIONS, supabase });
+
+      expect(outcome.success).toBe(true);
+      expect(outcome.warnings).toBeDefined();
+      expect(outcome.warnings!.length).toBeGreaterThan(0);
+      expect(outcome.warnings![0]).toContain('action_log');
+    });
+
+    it('returns warnings when stage_executions insert fails after successful mutation', async () => {
+      const { supabase } = createMutationTracker('stage_executions');
+      const toolCall: ToolCall = { tool: 'update_item', params: { item_id: 1, status: 'on_list' } };
+      const result = buildPipelineResult({ toolCalls: [toolCall] });
+
+      const outcome = await executeTool(toolCall, result, { ...DEFAULT_OPTIONS, supabase });
+
+      expect(outcome.success).toBe(true);
+      expect(outcome.warnings).toBeDefined();
+      expect(outcome.warnings!.some(w => w.includes('stage_executions'))).toBe(true);
     });
   });
 });

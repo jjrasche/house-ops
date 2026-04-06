@@ -14,6 +14,7 @@ export interface ResolveOptions {
 export interface ResolveCandidate {
   readonly entityId: number;
   readonly entityType: EntityType;
+  readonly name: string;
   readonly score: number;
 }
 
@@ -22,6 +23,7 @@ export interface ResolveCandidate {
 interface FuzzyMatch {
   readonly entity_id: number;
   readonly entity_type: string;
+  readonly entity_name: string;
   readonly score: number;
 }
 
@@ -86,6 +88,7 @@ function toCandidate(match: FuzzyMatch): ResolveCandidate {
   return {
     entityId: match.entity_id,
     entityType: match.entity_type as EntityType,
+    name: match.entity_name,
     score: match.score,
   };
 }

@@ -44,13 +44,14 @@ async function trainExtractAlias(
   householdId: number,
   alias: { readonly surfaceForm: string; readonly entityType: string; readonly entityId: number },
 ): Promise<void> {
-  await supabase.from('entity_lexicon').insert({
+  const { error } = await supabase.from('entity_lexicon').insert({
     household_id: householdId,
     surface_form: alias.surfaceForm,
     entity_type: alias.entityType,
     entity_id: alias.entityId,
     source: 'user_confirmed',
   });
+  if (error) throw new Error(`Training failed on entity_lexicon: ${error.message}`);
 }
 
 // --- Concept: save verb+mention → preferred entity rule ---
@@ -61,14 +62,15 @@ async function trainResolvePreference(
   verb: string,
   correction: { readonly mention: string; readonly preferredId: number; readonly preferredType: string },
 ): Promise<void> {
-  await supabase.from('resolution_context_rules').insert({
+  const { error } = await supabase.from('resolution_context_rules').upsert({
     household_id: householdId,
     verb: verb.toLowerCase(),
     mention: correction.mention.toLowerCase(),
     preferred_id: correction.preferredId,
     preferred_type: correction.preferredType,
     source: 'user_confirmed',
-  });
+  }, { onConflict: 'household_id,verb,mention' });
+  if (error) throw new Error(`Training failed on resolution_context_rules: ${error.message}`);
 }
 
 // --- Concept: save corrected verb → tool mapping ---
@@ -81,7 +83,7 @@ async function trainClassifyMapping(
 ): Promise<void> {
   const entityTypes = buildSortedEntityTypes(trace.resolved);
 
-  await supabase.from('verb_tool_lookup').insert({
+  const { error } = await supabase.from('verb_tool_lookup').insert({
     household_id: householdId,
     verb: trace.verb,
     entity_types: entityTypes,
@@ -89,6 +91,7 @@ async function trainClassifyMapping(
     confidence: USER_CONFIRMED_CONFIDENCE,
     source: 'user_confirmed',
   });
+  if (error) throw new Error(`Training failed on verb_tool_lookup: ${error.message}`);
 }
 
 // --- Concept: save corrected tool call as example ---
@@ -99,7 +102,7 @@ async function trainAssembleExample(
   trace: PipelineTrace,
   correctedParams: Readonly<Record<string, unknown>>,
 ): Promise<void> {
-  await supabase.from('tool_call_examples').insert({
+  const { error } = await supabase.from('tool_call_examples').insert({
     household_id: householdId,
     input_text: trace.inputText,
     verb: trace.verb,
@@ -107,6 +110,7 @@ async function trainAssembleExample(
     tool_params: correctedParams,
     source: 'user_confirmed',
   });
+  if (error) throw new Error(`Training failed on tool_call_examples: ${error.message}`);
 }
 
 // --- Leaf: extract sorted entity type array from resolved entities ---

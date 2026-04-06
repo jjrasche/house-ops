@@ -14,14 +14,19 @@ function createInsertTrackingMock(): {
   const supabase = {
     from: (table: string) => ({
       insert: (payload: Record<string, unknown>) => {
+        const assignedId = nextId++;
         insertedRows.push({ table, payload });
         return {
           select: () => ({
             single: () => Promise.resolve({
-              data: { id: nextId++ },
+              data: { id: assignedId },
               error: null,
             }),
           }),
+          then: (
+            onFulfilled?: (v: { data: null; error: null }) => unknown,
+            onRejected?: (r: unknown) => unknown,
+          ) => Promise.resolve({ data: null, error: null }).then(onFulfilled, onRejected),
         };
       },
     }),
@@ -76,12 +81,17 @@ describe('createEntity', () => {
     expect(insertedRows[0]!.table).toBe('locations');
   });
 
-  it('inserts store into stores table', async () => {
+  it('inserts store into kg_entities with entity_type column', async () => {
     const { supabase, insertedRows } = createInsertTrackingMock();
 
     await createEntity('store', 'Costco', { supabase, householdId: 1 });
 
-    expect(insertedRows[0]!.table).toBe('stores');
+    expect(insertedRows[0]!.table).toBe('kg_entities');
+    expect(insertedRows[0]!.payload).toEqual({
+      canonical_name: 'Costco',
+      entity_type: 'store',
+      household_id: 1,
+    });
   });
 
   it('returns the created entity with ID from DB', async () => {
@@ -104,11 +114,43 @@ describe('createEntity', () => {
     ).rejects.toThrow('Failed to create entity: duplicate key');
   });
 
-  it('throws for unsupported entity type', async () => {
-    const { supabase } = createInsertTrackingMock();
+  it('inserts activity into kg_entities with entity_type column', async () => {
+    const { supabase, insertedRows } = createInsertTrackingMock();
 
-    await expect(
-      createEntity('activity' as any, 'Soccer', { supabase, householdId: 1 }),
-    ).rejects.toThrow('No table for entity type: activity');
+    const result = await createEntity('activity', 'Soccer', { supabase, householdId: 1 });
+
+    expect(insertedRows[0]!.table).toBe('kg_entities');
+    expect(insertedRows[0]!.payload).toEqual({
+      canonical_name: 'Soccer',
+      entity_type: 'activity',
+      household_id: 1,
+    });
+    expect(result.entityType).toBe('activity');
+    expect(result.name).toBe('Soccer');
+  });
+
+  it('inserts lexicon entry for kg entity types', async () => {
+    const { supabase, insertedRows } = createInsertTrackingMock();
+
+    await createEntity('store', 'Trader Joes', { supabase, householdId: 1 });
+
+    const lexiconInsert = insertedRows.find(r => r.table === 'entity_lexicon');
+    expect(lexiconInsert).toBeDefined();
+    expect(lexiconInsert!.payload).toEqual({
+      household_id: 1,
+      surface_form: 'trader joes',
+      entity_type: 'store',
+      entity_id: 100,
+      source: 'user_confirmed',
+    });
+  });
+
+  it('does not insert lexicon entry for core entity types (trigger handles it)', async () => {
+    const { supabase, insertedRows } = createInsertTrackingMock();
+
+    await createEntity('item', 'Oat Milk', { supabase, householdId: 1 });
+
+    const lexiconInsert = insertedRows.find(r => r.table === 'entity_lexicon');
+    expect(lexiconInsert).toBeUndefined();
   });
 });

@@ -208,7 +208,7 @@ function ResolveCorrectionForm({
             <option value="" disabled>Pick match...</option>
             {candidates.map((c, i) => (
               <option key={`${c.entityType}-${c.entityId}`} value={String(i)}>
-                {c.entityType}(#{c.entityId}) — score {c.score.toFixed(2)}
+                {c.name} ({c.entityType}) — score {c.score.toFixed(2)}
               </option>
             ))}
           </Select>

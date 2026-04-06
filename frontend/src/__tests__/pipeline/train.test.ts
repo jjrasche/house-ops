@@ -7,23 +7,36 @@ import { applyCorrection } from '../../lib/pipeline/train';
 
 interface MutationRecord {
   readonly table: string;
-  readonly operation: 'insert';
+  readonly operation: 'insert' | 'upsert';
   readonly payload: unknown;
+  readonly options?: unknown;
 }
 
-function createMutationTracker() {
+function createMutationTracker(errorTable?: string) {
   const mutations: MutationRecord[] = [];
+
+  function buildThenable(table: string) {
+    const willError = table === errorTable;
+    const result = willError
+      ? { data: null, error: { message: `Insert failed on ${table}` } }
+      : { data: null, error: null };
+    return {
+      then: (
+        onFulfilled?: (v: typeof result) => unknown,
+        onRejected?: (r: unknown) => unknown,
+      ) => Promise.resolve(result).then(onFulfilled, onRejected),
+    };
+  }
 
   const supabase = {
     from: (table: string) => ({
       insert: (payload: unknown) => {
         mutations.push({ table, operation: 'insert', payload });
-        return {
-          then: (
-            onFulfilled?: (v: { data: null; error: null }) => unknown,
-            onRejected?: (r: unknown) => unknown,
-          ) => Promise.resolve({ data: null, error: null }).then(onFulfilled, onRejected),
-        };
+        return buildThenable(table);
+      },
+      upsert: (payload: unknown, options?: unknown) => {
+        mutations.push({ table, operation: 'upsert', payload, options });
+        return buildThenable(table);
       },
     }),
   } as unknown as SupabaseClient;
@@ -74,7 +87,7 @@ describe('applyCorrection', () => {
   });
 
   describe('resolve correction — preferred entity', () => {
-    it('inserts into resolution_context_rules', async () => {
+    it('upserts into resolution_context_rules with onConflict', async () => {
       const { supabase, mutations } = createMutationTracker();
       const correction: Correction = {
         stage: 'resolve',
@@ -86,9 +99,10 @@ describe('applyCorrection', () => {
 
       await applyCorrection(correction, trace, { ...DEFAULT_OPTIONS, supabase });
 
-      const ruleInsert = mutations.find(m => m.table === 'resolution_context_rules');
-      expect(ruleInsert).toBeDefined();
-      expect(ruleInsert!.payload).toEqual({
+      const ruleUpsert = mutations.find(m => m.table === 'resolution_context_rules');
+      expect(ruleUpsert).toBeDefined();
+      expect(ruleUpsert!.operation).toBe('upsert');
+      expect(ruleUpsert!.payload).toEqual({
         household_id: 1,
         verb: 'feed',
         mention: 'charlie',
@@ -96,6 +110,7 @@ describe('applyCorrection', () => {
         preferred_type: 'person',
         source: 'user_confirmed',
       });
+      expect(ruleUpsert!.options).toEqual({ onConflict: 'household_id,verb,mention' });
     });
   });
 
@@ -164,6 +179,58 @@ describe('applyCorrection', () => {
         tool_params: { item_id: 1, status: 'needed' },
         source: 'user_confirmed',
       });
+    });
+  });
+
+  describe('error propagation', () => {
+    it('throws when entity_lexicon insert fails', async () => {
+      const { supabase } = createMutationTracker('entity_lexicon');
+      const correction: Correction = {
+        stage: 'extract',
+        addedAlias: { surfaceForm: 'oat milk', entityType: 'item', entityId: 1 },
+      };
+
+      await expect(
+        applyCorrection(correction, buildTrace(), { ...DEFAULT_OPTIONS, supabase }),
+      ).rejects.toThrow('entity_lexicon');
+    });
+
+    it('throws when resolution_context_rules upsert fails', async () => {
+      const { supabase } = createMutationTracker('resolution_context_rules');
+      const correction: Correction = {
+        stage: 'resolve',
+        mention: 'Charlie',
+        preferredId: 5,
+        preferredType: 'person',
+      };
+
+      await expect(
+        applyCorrection(correction, buildTrace({ verb: 'feed' }), { ...DEFAULT_OPTIONS, supabase }),
+      ).rejects.toThrow('resolution_context_rules');
+    });
+
+    it('throws when verb_tool_lookup insert fails', async () => {
+      const { supabase } = createMutationTracker('verb_tool_lookup');
+      const correction: Correction = {
+        stage: 'classify',
+        toolName: 'create_action',
+      };
+
+      await expect(
+        applyCorrection(correction, buildTrace(), { ...DEFAULT_OPTIONS, supabase }),
+      ).rejects.toThrow('verb_tool_lookup');
+    });
+
+    it('throws when tool_call_examples insert fails', async () => {
+      const { supabase } = createMutationTracker('tool_call_examples');
+      const correction: Correction = {
+        stage: 'assemble',
+        params: { item_id: 1, status: 'needed' },
+      };
+
+      await expect(
+        applyCorrection(correction, buildTrace(), { ...DEFAULT_OPTIONS, supabase }),
+      ).rejects.toThrow('tool_call_examples');
     });
   });
 });

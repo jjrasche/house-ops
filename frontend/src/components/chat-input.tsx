@@ -113,13 +113,14 @@ export function ChatInput({
       if (!result) return;
       try {
         await applyCorrection(correction, result.trace, trainOptions);
+        await onLexiconChanged();
         const rerunResult = await runPipeline(inputText.trim(), pipelineOptions);
         setResult(rerunResult);
       } catch {
         setFeedback({ kind: 'error', message: 'Failed to save correction' });
       }
     },
-    [result, trainOptions, inputText, pipelineOptions],
+    [result, trainOptions, inputText, pipelineOptions, onLexiconChanged],
   );
 
   return (
