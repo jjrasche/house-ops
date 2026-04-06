@@ -1,0 +1,13 @@
+name: Deploy
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "frontend/**"
+jobs:
+  deploy:
+    uses: jjrasche/platform/.github/workflows/build-deploy.yml@master
+    with:
+      app_name: house-ops
+      context: frontend
+    secrets: inherit
