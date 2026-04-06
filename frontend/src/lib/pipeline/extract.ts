@@ -311,6 +311,26 @@ function matchesWordBoundary(text: string, word: string): boolean {
   return new RegExp(`\\b${word}\\b`).test(text);
 }
 
+// --- Leaf: map inflected verb to base form ---
+// Shared by classify (DB lookup) and assemble (status mapping).
+// Only includes forms NOT already in verb_tool_lookup seed data.
+
+const VERB_LEMMA_MAP: Readonly<Record<string, string>> = {
+  needed: 'need', needs: 'need',
+  added: 'add', adds: 'add', adding: 'add',
+  buys: 'buy', buying: 'buy',
+  reminded: 'remind', reminds: 'remind', reminding: 'remind',
+  scheduled: 'schedule', schedules: 'schedule', scheduling: 'schedule',
+  created: 'create', creates: 'create', creating: 'create',
+  saved: 'save', saves: 'save', saving: 'save',
+  finishes: 'finished', finishing: 'finished',
+  completes: 'completed', completing: 'completed',
+};
+
+export function lemmatizeVerb(verb: string): string {
+  return VERB_LEMMA_MAP[verb] ?? verb;
+}
+
 // --- Leaf: strip leading articles ---
 
 function stripArticle(text: string): string {

@@ -2,6 +2,7 @@ import type {
   AssembleInput, AssembleOutput, ToolCall,
   ResolvedEntity, ParsedDate, ParsedQuantity,
 } from './types';
+import { lemmatizeVerb } from './extract';
 
 // --- Public types ---
 
@@ -99,7 +100,7 @@ function inferStatusFromExamplesOrMap(
     return;
   }
 
-  const status = VERB_STATUS_MAP[verb];
+  const status = VERB_STATUS_MAP[verb] ?? VERB_STATUS_MAP[lemmatizeVerb(verb)];
   if (status) params.status = status;
 }
 

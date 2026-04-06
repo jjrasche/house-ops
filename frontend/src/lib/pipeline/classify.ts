@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ClassifyInput, ClassifyOutput, EntityType } from './types';
+import { lemmatizeVerb } from './extract';
 
 // --- Public types ---
 
@@ -21,20 +22,6 @@ interface VerbToolMatch {
 const CONFIDENCE_THRESHOLD = 0.85;
 const VERB_ONLY_PENALTY = 0.25;
 
-// Maps inflected surface forms to their base verb for verb_tool_lookup matching.
-// Only includes forms NOT already seeded in verb_tool_lookup (e.g., "bought" is
-// already a seed entry, so it doesn't need a lemma mapping here).
-const VERB_LEMMA_MAP: Readonly<Record<string, string>> = {
-  needed: 'need', needs: 'need',
-  added: 'add', adds: 'add', adding: 'add',
-  buys: 'buy', buying: 'buy',
-  reminded: 'remind', reminds: 'remind', reminding: 'remind',
-  scheduled: 'schedule', schedules: 'schedule', scheduling: 'schedule',
-  created: 'create', creates: 'create', creating: 'create',
-  saved: 'save', saves: 'save', saving: 'save',
-  finishes: 'finished', finishing: 'finished',
-  completes: 'completed', completing: 'completed',
-};
 
 // --- Orchestrator ---
 
@@ -93,12 +80,6 @@ async function queryVerbRows(
     .eq('verb', verb);
 
   return (data ?? []) as VerbToolMatch[];
-}
-
-// --- Leaf: map inflected verb to base form ---
-
-function lemmatizeVerb(verb: string): string {
-  return VERB_LEMMA_MAP[verb] ?? verb;
 }
 
 // --- Concept: subset matching — row's entity_types ⊆ input entity types ---

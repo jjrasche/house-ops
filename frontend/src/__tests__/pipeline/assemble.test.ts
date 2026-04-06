@@ -83,6 +83,22 @@ describe('ASSEMBLE stage', () => {
       expect(output.toolCalls[0]!.params).toHaveProperty('status', expectedStatus);
     });
 
+    it.each([
+      ['needed',     'needed'],
+      ['needs',      'needed'],
+      ['added',      'on_list'],
+      ['adds',       'on_list'],
+      ['buying',     'on_list'],
+      ['buys',       'on_list'],
+    ])('inflected verb="%s" → status="%s" via lemma', (verb, expectedStatus) => {
+      const output = assemble(makeInput({
+        toolName: 'update_item',
+        verb,
+        resolved: [resolved('milk', ITEMS.milk.id, 'item')],
+      }));
+      expect(output.toolCalls[0]!.params).toHaveProperty('status', expectedStatus);
+    });
+
     it('no status for unknown verbs', () => {
       const output = assemble(makeInput({
         toolName: 'update_item',
