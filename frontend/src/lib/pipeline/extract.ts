@@ -20,7 +20,7 @@ export interface ExtractOptions {
 // --- Constants ---
 
 // Multi-word verb phrases, checked before single-word scan.
-const VERB_PHRASES = ['pick up', 'out of'];
+const VERB_PHRASES = ['picked up', 'pick up', 'running low', 'all set', 'low on', 'out of'];
 
 // Single-word verbs recognized by the deterministic path.
 // Includes common inflections so they're caught without relying on
@@ -29,6 +29,9 @@ const KNOWN_VERBS = [
   'buy', 'bought', 'buying', 'buys',
   'add', 'added', 'adding', 'adds',
   'need', 'needed', 'needs',
+  'get', 'got', 'gets', 'getting',
+  'grab', 'grabbed', 'grabs', 'grabbing',
+  'put', 'puts', 'putting',
   'have', 'has', 'had',
   'used', 'uses',
   'finished', 'finishes', 'finishing',
@@ -54,7 +57,7 @@ const IMPLICIT_ONE_PATTERN = /\bone\s+of\s+the\b/i;
 
 // Function words and pronouns to strip before unknown entity detection
 const STRIP_WORDS =
-  /\b(i|me|my|we|you|your|he|she|it|its|they|them|the|a|an|to|in|from|of|about|at|on|for|and|but|or|with|that|this|just|some|all)\b/gi;
+  /\b(i|me|my|we|you|your|he|she|it|its|they|them|the|a|an|to|in|from|of|about|at|on|for|and|but|or|with|that|this|just|some|all|more|please|yo|okay|ok|actually|alright)\b/gi;
 
 // Nouns that appear in household commands but aren't entities
 const NON_ENTITY_NOUNS = new Set([
@@ -320,6 +323,10 @@ const VERB_LEMMA_MAP: Readonly<Record<string, string>> = {
   needed: 'need', needs: 'need',
   added: 'add', adds: 'add', adding: 'add',
   buys: 'buy', buying: 'buy',
+  gets: 'get', getting: 'get',
+  grabs: 'grab', grabbing: 'grab',
+  puts: 'put', putting: 'put',
+  'picked up': 'pick up',
   has: 'have', had: 'have',
   uses: 'used',
   reminded: 'remind', reminds: 'remind', reminding: 'remind',

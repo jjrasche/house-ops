@@ -128,16 +128,13 @@ function assessConfidence(
     confidence *= 1 - (excessUnresolved * 0.15);
   }
 
-  const hasDuplicateTypes = hasSameTypedEntities(input.entityTypes);
-  const needsLlm = confidence < CONFIDENCE_THRESHOLD || hasDuplicateTypes;
+  const needsLlm = confidence < CONFIDENCE_THRESHOLD;
 
   return {
     toolName: match.tool_name,
     confidence,
     needsLlm,
-    // Verb-only matches can still assemble — the unresolved entity
-    // will surface in the card for the user to confirm
-    canShowCard: !hasDuplicateTypes,
+    canShowCard: true,
   };
 }
 
@@ -171,8 +168,3 @@ function selectLeastSpecific(matches: VerbToolMatch[]): VerbToolMatch {
   );
 }
 
-// --- Leaf: detect two same-typed entities ---
-
-function hasSameTypedEntities(entityTypes: readonly EntityType[]): boolean {
-  return new Set(entityTypes).size < entityTypes.length;
-}

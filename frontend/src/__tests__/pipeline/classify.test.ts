@@ -158,13 +158,14 @@ describe('CLASSIFY stage', () => {
       expect(output.needsLlm).toBe(true);
     });
 
-    it('two same-typed entities route to LLM despite tool match', async () => {
+    it('two same-typed entities route deterministic (assemble expands)', async () => {
       const output = await classify(
         makeInput('need', ['item', 'item']),
         makeOptions(),
       );
-      expect(output.needsLlm).toBe(true);
-      expect(output.canShowCard).toBe(false);
+      expect(output.needsLlm).toBe(false);
+      expect(output.canShowCard).toBe(true);
+      expect(output.toolName).toBe('update_item');
     });
   });
 

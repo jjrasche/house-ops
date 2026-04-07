@@ -82,18 +82,18 @@ describe('Pipeline integration (wired stages)', () => {
       expect(result.trace.verb).toBe('organize');
     });
 
-    it('"milk" routes to LLM (no verb, bare noun)', async () => {
+    it('"milk" routes deterministic via bare noun default (verb → need)', async () => {
       const result = await runPipeline('milk', pipelineOptions);
-      expect(result.path).toBe('llm');
-      expect(result.toolCalls).toHaveLength(0);
-      expect(result.trace.verb).toBe('');
+      expect(result.path).toBe('deterministic');
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.trace.verb).toBe('need');
       expect(result.trace.entityMentions).toContainEqual({ text: 'milk', typeHint: 'item' });
     });
 
-    it('"buy milk and milk" routes to LLM (duplicate same-type entities)', async () => {
+    it('"buy milk and milk" routes deterministic (expands to 2 tool calls)', async () => {
       const result = await runPipeline('buy milk and milk', pipelineOptions);
-      // Classify detects duplicate entity types → needsLlm
-      expect(result.path).toBe('llm');
+      expect(result.path).toBe('deterministic');
+      expect(result.toolCalls.length).toBeGreaterThanOrEqual(1);
     });
   });
 

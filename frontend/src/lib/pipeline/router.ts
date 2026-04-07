@@ -42,6 +42,12 @@ export async function runPipeline(
     ),
   );
 
+  const verb = inferBareNounDefault(extractResult.verb, extractResult.entityMentions);
+  if (verb !== extractResult.verb) {
+    // Mutate in place — avoids cloning the full ExtractOutput for one field override
+    (extractResult as { verb: string }).verb = verb;
+  }
+
   const resolveResult = await recordExecutionAsync(
     executions, 'resolve', conversationId, options.householdId,
     { entityMentions: extractResult.entityMentions, householdId: options.householdId, verb: extractResult.verb },
@@ -144,6 +150,20 @@ async function recordExecutionAsync<T extends object>(
 
   executions.push(buildExecution(stage, conversationId, householdId, inputPayload, output, durationMs));
   return output;
+}
+
+// --- Concept: default bare nouns to "need" when all mentions are known items ---
+// Conservative: only applies when verb is empty AND every entity mention resolved
+// to a known item type. Prevents "milk" from falling to LLM unnecessarily.
+
+const BARE_NOUN_ITEM_TYPES = new Set(['item']);
+
+function inferBareNounDefault(verb: string, mentions: readonly EntityMention[]): string {
+  if (verb !== '') return verb;
+  if (mentions.length === 0) return verb;
+  if (mentions.some(m => !BARE_NOUN_ITEM_TYPES.has(m.typeHint))) return verb;
+  if (mentions.length > 1) return verb;
+  return 'need';
 }
 
 // --- Leaf: collect stage outputs into a user-visible trace ---

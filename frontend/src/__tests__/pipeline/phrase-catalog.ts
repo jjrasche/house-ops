@@ -44,6 +44,7 @@ export const PHRASE_CATALOG: PhraseRow[] = [
   { phrase: "we're out of eggs",                           expectedPath: 'deterministic', expectedVerb: 'out of',    expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'core' },
   { phrase: 'pick up eggs from Costco',                    expectedPath: 'deterministic', expectedVerb: 'pick up',   expectedTool: 'update_item',   expectedStatus: 'on_list',    expectedCallCount: 1, expectedMentions: ['eggs', 'costco'], tag: 'core' },
   { phrase: 'I bought the eggs',                           expectedPath: 'deterministic', expectedVerb: 'bought',    expectedTool: 'update_item',   expectedStatus: 'purchased',  tag: 'core' },
+  { phrase: 'save the chicken tikka masala recipe',        expectedPath: 'deterministic', expectedVerb: 'save',      expectedTool: 'create_recipe',                                tag: 'core' },
 
   // ==========================================================================
   // TAG: inflection — verb tense/person variants routed via lemma fallback
@@ -54,6 +55,9 @@ export const PHRASE_CATALOG: PhraseRow[] = [
   { phrase: 'Justine buys cereal',                         expectedPath: 'deterministic', expectedVerb: 'buys',      expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'inflection' },
   { phrase: 'Jim adds eggs',                               expectedPath: 'deterministic', expectedVerb: 'adds',      expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'inflection' },
   { phrase: 'she saves the recipe',                        expectedPath: 'deterministic', expectedVerb: 'saves',     expectedTool: 'create_recipe',                                tag: 'inflection' },
+  { phrase: 'he gets cereal',                              expectedPath: 'deterministic', expectedVerb: 'gets',      expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'inflection' },
+  { phrase: 'she grabs dish soap',                         expectedPath: 'deterministic', expectedVerb: 'grabs',     expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'inflection' },
+  { phrase: 'Jim puts milk on the list',                   expectedPath: 'deterministic', expectedVerb: 'puts',      expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'inflection' },
 
   // ==========================================================================
   // TAG: quantity — numeric + unit extraction
@@ -88,6 +92,9 @@ export const PHRASE_CATALOG: PhraseRow[] = [
   { phrase: 'and pick up dish soap',                       expectedPath: 'deterministic', expectedVerb: 'pick up',   expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'wrapper' },
   { phrase: 'oh and we need garbage bags',                 expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'wrapper' },
   { phrase: 'hey remind me to call the dentist',           expectedPath: 'deterministic', expectedVerb: 'remind',    expectedTool: 'create_action',                                tag: 'wrapper' },
+  { phrase: 'yo grab some cereal',                         expectedPath: 'deterministic', expectedVerb: 'grab',      expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'wrapper' },
+  { phrase: 'okay we need laundry detergent',              expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'wrapper' },
+  { phrase: 'actually get some eggs',                      expectedPath: 'deterministic', expectedVerb: 'get',       expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'wrapper' },
 
   // ==========================================================================
   // TAG: contraction — apostrophes and shortened forms
@@ -98,14 +105,16 @@ export const PHRASE_CATALOG: PhraseRow[] = [
   { phrase: "all out of dish soap",                        expectedPath: 'deterministic', expectedVerb: 'out of',    expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'contraction' },
 
   // ==========================================================================
-  // TAG: multi-entity — multiple same-typed entities → LLM today because
-  // classify rejects via hasSameTypedEntities. Assemble CAN expand these
-  // (expandByDuplicateType), but classify gates it. Candidate for promotion.
+  // TAG: multi-entity — multiple same-typed entities expanded into N tool calls
   // ==========================================================================
-  { phrase: 'buy milk and eggs',                           expectedPath: 'llm', expectedVerb: 'buy',                                                                               tag: 'multi-entity' },
-  { phrase: 'pick up cereal and dish soap from Costco',    expectedPath: 'llm', expectedVerb: 'pick up',                                                                           tag: 'multi-entity' },
-  { phrase: 'need milk and paper towels',                  expectedPath: 'llm', expectedVerb: 'need',                                                                              tag: 'multi-entity' },
-  { phrase: 'so we need cereal and dish soap',             expectedPath: 'llm', expectedVerb: 'need',                                                                              tag: 'multi-entity' },
+  { phrase: 'buy milk and eggs',                           expectedPath: 'deterministic', expectedVerb: 'buy',     expectedTool: 'update_item',   expectedStatus: 'on_list',    expectedCallCount: 2, tag: 'multi-entity' },
+  { phrase: 'pick up cereal and dish soap from Costco',    expectedPath: 'deterministic', expectedVerb: 'pick up', expectedTool: 'update_item',   expectedStatus: 'on_list',    expectedCallCount: 2, tag: 'multi-entity' },
+  { phrase: 'need milk and paper towels',                  expectedPath: 'deterministic', expectedVerb: 'need',    expectedTool: 'update_item',   expectedStatus: 'needed',     expectedCallCount: 2, tag: 'multi-entity' },
+  { phrase: 'so we need cereal and dish soap',             expectedPath: 'deterministic', expectedVerb: 'need',    expectedTool: 'update_item',   expectedStatus: 'needed',     expectedCallCount: 2, tag: 'multi-entity' },
+  { phrase: 'get milk and cereal',                         expectedPath: 'deterministic', expectedVerb: 'get',     expectedTool: 'update_item',   expectedStatus: 'on_list',    expectedCallCount: 2, tag: 'multi-entity' },
+  { phrase: 'grab eggs and dish soap',                     expectedPath: 'deterministic', expectedVerb: 'grab',    expectedTool: 'update_item',   expectedStatus: 'on_list',    expectedCallCount: 2, tag: 'multi-entity' },
+  { phrase: 'got milk and eggs from Costco',               expectedPath: 'deterministic', expectedVerb: 'got',     expectedTool: 'update_item',   expectedStatus: 'purchased',  expectedCallCount: 2, tag: 'multi-entity' },
+  { phrase: 'buy milk eggs and cereal',                    expectedPath: 'deterministic', expectedVerb: 'buy',     expectedTool: 'update_item',   expectedStatus: 'on_list',    expectedCallCount: 3, tag: 'multi-entity' },
 
   // ==========================================================================
   // TAG: compound-item — multi-word product names that must resolve as one entity
@@ -121,50 +130,57 @@ export const PHRASE_CATALOG: PhraseRow[] = [
   { phrase: 'Jim needs milk',                              expectedPath: 'deterministic', expectedVerb: 'needs',     expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'person' },
   { phrase: 'Justine bought eggs',                         expectedPath: 'deterministic', expectedVerb: 'bought',    expectedTool: 'update_item',   expectedStatus: 'purchased',  tag: 'person' },
   { phrase: 'tell Charlie to buy cereal',                  expectedPath: 'deterministic', expectedVerb: 'buy',       expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'person' },
+  { phrase: 'Justine grabbed dish soap',                   expectedPath: 'deterministic', expectedVerb: 'grabbed',   expectedTool: 'update_item',   expectedStatus: 'purchased',  tag: 'person' },
+  { phrase: 'Jim picked up cereal',                        expectedPath: 'deterministic', expectedVerb: 'picked up', expectedTool: 'update_item',   expectedStatus: 'purchased',  tag: 'person' },
 
   // ==========================================================================
-  // TAG: llm-known — phrases we KNOW require LLM today. As we improve the
-  // deterministic path, rows move from here to a deterministic tag above.
-  // Each has a note explaining WHY it falls to LLM.
+  // TAG: get-grab — get/got/grab verb family
+  // ==========================================================================
+  { phrase: 'get milk',                                    expectedPath: 'deterministic', expectedVerb: 'get',       expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'get-grab' },
+  { phrase: 'get some eggs',                               expectedPath: 'deterministic', expectedVerb: 'get',       expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'get-grab' },
+  { phrase: 'got milk from Costco',                        expectedPath: 'deterministic', expectedVerb: 'got',       expectedTool: 'update_item',   expectedStatus: 'purchased',  tag: 'get-grab' },
+  { phrase: 'I got the eggs',                              expectedPath: 'deterministic', expectedVerb: 'got',       expectedTool: 'update_item',   expectedStatus: 'purchased',  tag: 'get-grab' },
+  { phrase: 'we got eggs',                                 expectedPath: 'deterministic', expectedVerb: 'got',       expectedTool: 'update_item',   expectedStatus: 'purchased',  tag: 'get-grab' },
+  { phrase: 'go get milk from Kroger',                     expectedPath: 'deterministic', expectedVerb: 'get',       expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'get-grab' },
+  { phrase: 'grab some eggs',                              expectedPath: 'deterministic', expectedVerb: 'grab',      expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'get-grab' },
+  { phrase: 'grabbed cereal from Target',                  expectedPath: 'deterministic', expectedVerb: 'grabbed',   expectedTool: 'update_item',   expectedStatus: 'purchased',  tag: 'get-grab' },
+  { phrase: 'go grab cereal from Kroger',                  expectedPath: 'deterministic', expectedVerb: 'grab',      expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'get-grab' },
+  { phrase: 'can you get some dish soap',                  expectedPath: 'deterministic', expectedVerb: 'get',       expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'get-grab' },
+
+  // ==========================================================================
+  // TAG: put — put verb family
+  // ==========================================================================
+  { phrase: 'put milk on the list',                        expectedPath: 'deterministic', expectedVerb: 'put',       expectedTool: 'update_item',   expectedStatus: 'on_list',    tag: 'put' },
+
+  // ==========================================================================
+  // TAG: status-phrase — status expressions (running low, low on)
+  // ==========================================================================
+  { phrase: 'running low on dish soap',                    expectedPath: 'deterministic', expectedVerb: 'running low', expectedTool: 'update_item', expectedStatus: 'needed',     tag: 'status-phrase' },
+  { phrase: 'low on garbage bags',                         expectedPath: 'deterministic', expectedVerb: 'low on',     expectedTool: 'update_item', expectedStatus: 'needed',     tag: 'status-phrase' },
+  { phrase: "we're running low on milk",                   expectedPath: 'deterministic', expectedVerb: 'running low', expectedTool: 'update_item', expectedStatus: 'needed',     tag: 'status-phrase' },
+  { phrase: "we're all set on cereal",                     expectedPath: 'deterministic', expectedVerb: 'all set',    expectedTool: 'update_item', expectedStatus: 'stocked',    tag: 'status-phrase' },
+
+  // ==========================================================================
+  // TAG: bare-noun — no verb, single known item → default to "need"
+  // ==========================================================================
+  { phrase: 'milk',                                        expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'bare-noun' },
+  { phrase: 'eggs please',                                 expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'bare-noun' },
+  { phrase: 'more paper towels',                           expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'bare-noun' },
+  { phrase: 'cereal',                                      expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'bare-noun' },
+  { phrase: 'toilet paper',                                expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'bare-noun' },
+  { phrase: 'dish soap',                                   expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'bare-noun' },
+  { phrase: 'garbage bags',                                expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'bare-noun' },
+  { phrase: 'laundry detergent',                           expectedPath: 'deterministic', expectedVerb: 'need',      expectedTool: 'update_item',   expectedStatus: 'needed',     tag: 'bare-noun' },
+
+  // ==========================================================================
+  // TAG: llm-known — phrases we KNOW require LLM today.
   // ==========================================================================
 
-  // -- Missing verb: "get/got" family --
-  { phrase: 'get milk',                                    expectedPath: 'llm', expectedVerb: 'get',       tag: 'llm-known' },
-  { phrase: 'get some eggs',                               expectedPath: 'llm', expectedVerb: 'get',       tag: 'llm-known' },
-  { phrase: 'got milk from Costco',                        expectedPath: 'llm', expectedVerb: 'got',       tag: 'llm-known' },
-  { phrase: 'I got the eggs',                              expectedPath: 'llm', expectedVerb: 'got',       tag: 'llm-known' },
-  { phrase: 'we got eggs',                                 expectedPath: 'llm', expectedVerb: 'got',       tag: 'llm-known' },
-  { phrase: 'go get milk from Kroger',                     expectedPath: 'llm',                            tag: 'llm-known' },
-
-  // -- Missing verb: "grab" family --
-  { phrase: 'grab some eggs',                              expectedPath: 'llm', expectedVerb: 'grab',      tag: 'llm-known' },
-  { phrase: 'grabbed cereal from Target',                  expectedPath: 'llm', expectedVerb: 'grabbed',   tag: 'llm-known' },
-
-  // -- Missing verb: "put" --
-  { phrase: 'put milk on the list',                        expectedPath: 'llm', expectedVerb: 'put',       tag: 'llm-known' },
-
-  // -- Missing verb: "picked up" (past tense of phrase verb) --
-  { phrase: 'Jim picked up cereal',                        expectedPath: 'llm',                            tag: 'llm-known' },
-  { phrase: 'Justine grabbed dish soap',                   expectedPath: 'llm', expectedVerb: 'grabbed',   tag: 'llm-known' },
-
-  // -- Status expressions not yet recognized --
-  { phrase: 'running low on dish soap',                    expectedPath: 'llm',                            tag: 'llm-known' },
-  { phrase: 'low on garbage bags',                         expectedPath: 'llm',                            tag: 'llm-known' },
-  { phrase: "we're all set on cereal",                     expectedPath: 'llm',                            tag: 'llm-known' },
-
-  // -- Bare nouns (no verb) --
-  { phrase: 'milk',                                        expectedPath: 'llm', expectedVerb: '',          tag: 'llm-known' },
-  { phrase: 'eggs please',                                 expectedPath: 'llm', expectedVerb: '',          tag: 'llm-known' },
-  { phrase: 'more paper towels',                           expectedPath: 'llm', expectedVerb: '',          tag: 'llm-known' },
-  { phrase: 'cereal',                                      expectedPath: 'llm', expectedVerb: '',          tag: 'llm-known' },
-  { phrase: 'toilet paper',                                expectedPath: 'llm', expectedVerb: '',          tag: 'llm-known' },
+  // -- Bare noun multi-entity (no verb, multiple items) --
   { phrase: 'milk and eggs',                               expectedPath: 'llm', expectedVerb: '',          tag: 'llm-known' },
 
-  // -- Ambiguous / complex --
-  // "Theo has wrestling at 4" now routes deterministic after has→have lemma
-  // fix. Classify finds have+item(activity) match. Arguably wrong (should be
-  // create_action for a schedule entry) but it's the pipeline's current best
-  // guess — user corrects via card → trains classify. Keep as deterministic.
+  // "Theo has wrestling at 4" routes deterministic after has→have lemma fix.
+  // Arguably wrong (should be create_action) but pipeline's current best guess.
   { phrase: 'Theo has wrestling at 4',                     expectedPath: 'deterministic', expectedVerb: 'has', tag: 'llm-known' },
   { phrase: 'organize the garage',                         expectedPath: 'llm',                            tag: 'llm-known' },
 

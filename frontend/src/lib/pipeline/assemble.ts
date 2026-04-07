@@ -21,6 +21,11 @@ export interface AssembleOptions {
 const VERB_STATUS_MAP: Record<string, string> = {
   buy: 'on_list', add: 'on_list', need: 'needed', 'pick up': 'on_list',
   bought: 'purchased', purchased: 'purchased',
+  get: 'on_list', got: 'purchased',
+  grab: 'on_list', grabbed: 'purchased',
+  put: 'on_list',
+  'picked up': 'purchased',
+  'running low': 'needed', 'low on': 'needed', 'all set': 'stocked',
   have: 'stocked', finished: 'done', completed: 'done',
   'out of': 'needed',
 };
