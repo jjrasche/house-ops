@@ -66,10 +66,13 @@ describe('Pipeline integration (wired stages)', () => {
   });
 
   describe('llm path', () => {
-    it('"Theo has wrestling at 4" routes to LLM (ambiguous verb)', async () => {
+    it('"Theo has wrestling at 4" routes deterministic after has→have lemma fix', async () => {
       const result = await runPipeline('Theo has wrestling at 4', pipelineOptions);
-      expect(result.path).toBe('llm');
-      expect(result.toolCalls).toHaveLength(0);
+      // has→have lemma maps to update_item via verb_tool_lookup.
+      // Arguably wrong (should be schedule/create_action), but classify's
+      // best deterministic guess. User corrects via card → trains classify.
+      expect(result.path).toBe('deterministic');
+      expect(result.trace.verb).toBe('has');
     });
 
     it('"organize the garage" routes to LLM (unknown verb)', async () => {

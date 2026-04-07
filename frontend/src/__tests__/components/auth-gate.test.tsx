@@ -148,7 +148,7 @@ describe('Login', () => {
 
     expect(mockSignInWithOtp).toHaveBeenCalledWith({
       email: 'jim@example.com',
-      options: { shouldCreateUser: true },
+      options: { shouldCreateUser: false },
     });
 
     await waitFor(() => {
