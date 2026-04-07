@@ -25,6 +25,10 @@ jobs:
         with:
           context: frontend
           push: true
+          build-args: |
+            VITE_SUPABASE_URL=https://api.jimr.fyi
+            VITE_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+            VITE_DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
