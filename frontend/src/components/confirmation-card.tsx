@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { PipelineResult, ResolvedEntity, ToolCall, EntityType, Correction } from '../lib/pipeline/types';
+import type { PipelineResult, ResolvedEntity, ToolCall, EntityType, Correction } from '@house-ops/core';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';

@@ -11,10 +11,8 @@
 // To add coverage: edit phrase-catalog.ts. This file doesn't change.
 
 import { describe, it, expect, afterAll } from 'vitest';
-import type { LexiconEntry } from '../../lib/pipeline/extract';
-import { extract, lemmatizeVerb } from '../../lib/pipeline/extract';
-import { runPipeline } from '../../lib/pipeline/router';
-import type { PipelineOptions } from '../../lib/pipeline/router';
+import type { LexiconEntry, PipelineOptions } from '@house-ops/core';
+import { extract, lemmatizeVerb, runPipeline } from '@house-ops/core';
 import {
   PEOPLE, ITEMS, LOCATIONS, STORES, ACTIVITIES, ACTIONS,
   TEST_HOUSEHOLD_ID,

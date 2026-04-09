@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { resolve, findCandidates } from '../../lib/pipeline/resolve';
-import type { ResolveOptions } from '../../lib/pipeline/resolve';
+import type { ResolveOptions } from '@house-ops/core';
+import { resolve, findCandidates } from '@house-ops/core';
 import { PEOPLE, ITEMS, LOCATIONS, STORES, ACTIVITIES } from './seed';
 import { createMockSupabase } from './mock-supabase';
 import type { SeedRow } from './mock-supabase';

@@ -5,7 +5,7 @@ import type {
   EntityType,
   ResolvedEntity,
   ContextItem,
-} from '../../lib/pipeline/types';
+} from '@house-ops/core';
 
 // --- People ---
 export const PEOPLE = {

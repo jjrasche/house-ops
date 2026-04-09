@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatInput } from '../../components/chat-input';
-import type { PipelineResult, PipelineTrace, Correction } from '../../lib/pipeline/types';
+import type { PipelineResult, PipelineTrace, Correction } from '@house-ops/core';
 
 // --- Module mocks ---
 

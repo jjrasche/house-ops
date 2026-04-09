@@ -1,13 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { PipelineResult, ToolCall, EntityType, Correction } from '../lib/pipeline/types';
-import type { ExecuteResult } from '../lib/pipeline/execute';
-import type { PipelineOptions } from '../lib/pipeline/router';
-import type { CreateEntityOptions } from '../lib/pipeline/create-entity';
-import type { TrainOptions } from '../lib/pipeline/train';
-import { runPipeline } from '../lib/pipeline/router';
-import { createEntity } from '../lib/pipeline/create-entity';
-import { applyCorrection } from '../lib/pipeline/train';
-import { findCandidates } from '../lib/pipeline/resolve';
+import type { PipelineResult, ToolCall, EntityType, Correction, ExecuteResult, PipelineOptions, CreateEntityOptions, TrainOptions } from '@house-ops/core';
+import { runPipeline, createEntity, applyCorrection, findCandidates } from '@house-ops/core';
 import { ConfirmationCard } from './confirmation-card';
 import { useDeepgramSTT } from '../lib/voice/use-deepgram-stt';
 import type { ListeningState } from '../lib/voice/use-deepgram-stt';

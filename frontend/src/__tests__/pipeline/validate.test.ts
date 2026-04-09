@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validate } from '../../lib/pipeline/validate';
-import type { ValidateOptions } from '../../lib/pipeline/validate';
+import type { ValidateOptions } from '@house-ops/core';
+import { validate } from '@house-ops/core';
 import { ITEMS, PEOPLE, LOCATIONS } from './seed';
 
 // --- FK existence checker using seed data ---

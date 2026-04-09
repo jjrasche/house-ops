@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { ClassifyInput, EntityType } from '../../lib/pipeline/types';
-import { classify } from '../../lib/pipeline/classify';
-import type { ClassifyOptions } from '../../lib/pipeline/classify';
+import type { ClassifyInput, EntityType, ClassifyOptions } from '@house-ops/core';
+import { classify } from '@house-ops/core';
 import { createMockSupabase, VERB_TOOL_SEED } from './mock-supabase';
 import type { VerbToolRow } from './mock-supabase';
 import { TEST_HOUSEHOLD_ID } from './seed';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { PipelineResult, ToolCall, StageExecution } from '../../lib/pipeline/types';
-import { executeTool, rejectTool } from '../../lib/pipeline/execute';
+import type { PipelineResult, ToolCall, StageExecution } from '@house-ops/core';
+import { executeTool, rejectTool } from '@house-ops/core';
 
 // --- Mock Supabase that tracks mutations ---
 

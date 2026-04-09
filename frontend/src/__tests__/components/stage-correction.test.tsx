@@ -3,8 +3,7 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StageCorrection } from '../../components/stage-correction';
 import type { FetchCandidates } from '../../components/stage-correction';
-import type { PipelineTrace } from '../../lib/pipeline/types';
-import type { ResolveCandidate } from '../../lib/pipeline/resolve';
+import type { PipelineTrace, ResolveCandidate } from '@house-ops/core';
 
 afterEach(cleanup);
 

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { ExtractInput } from '../../lib/pipeline/types';
-import { extract } from '../../lib/pipeline/extract';
-import type { LexiconEntry } from '../../lib/pipeline/extract';
+import type { ExtractInput, LexiconEntry } from '@house-ops/core';
+import { extract } from '@house-ops/core';
 import { TEST_HOUSEHOLD_ID, ITEMS, PEOPLE, LOCATIONS, STORES, ACTIVITIES } from './seed';
 
 // Build lexicon from seed data (mirrors entity_lexicon table in production)

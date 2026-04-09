@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createEntity } from '../../lib/pipeline/create-entity';
+import { createEntity } from '@house-ops/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // --- Mock Supabase that tracks inserts and returns IDs ---

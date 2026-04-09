@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { AssembleInput, ResolvedEntity, ParsedDate, ParsedQuantity } from '../../lib/pipeline/types';
-import { assemble } from '../../lib/pipeline/assemble';
+import type { AssembleInput, ResolvedEntity, ParsedDate, ParsedQuantity } from '@house-ops/core';
+import { assemble } from '@house-ops/core';
 import { ITEMS, LOCATIONS, STORES, PEOPLE, ACTIONS } from './seed';
 
 // --- Helpers ---

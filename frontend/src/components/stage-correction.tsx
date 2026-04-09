@@ -1,10 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import type {
   PipelineTrace, Correction, ResolveCorrection, ResolvedEntity,
-  ExtractCorrection, ClassifyCorrection, AssembleCorrection,
-} from '../lib/pipeline/types';
-import type { ResolveCandidate } from '../lib/pipeline/resolve';
-import { TOOL_SCHEMAS } from '../lib/pipeline/validate';
+  ExtractCorrection, ClassifyCorrection, AssembleCorrection, ResolveCandidate,
+} from '@house-ops/core';
+import { TOOL_SCHEMAS } from '@house-ops/core';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Select } from './ui/select';

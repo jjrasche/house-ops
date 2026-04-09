@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, within, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConfirmationCard } from '../../components/confirmation-card';
-import type { PipelineResult, ToolCall } from '../../lib/pipeline/types';
+import type { PipelineResult, ToolCall } from '@house-ops/core';
 
 afterEach(cleanup);
 

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { LexiconEntry } from '../../lib/pipeline/extract';
-import { runPipeline } from '../../lib/pipeline/router';
-import type { PipelineOptions } from '../../lib/pipeline/router';
+import type { LexiconEntry, PipelineOptions } from '@house-ops/core';
+import { runPipeline } from '@house-ops/core';
 import {
   PEOPLE, ITEMS, LOCATIONS, STORES, ACTIVITIES, ACTIONS,
   TEST_HOUSEHOLD_ID,

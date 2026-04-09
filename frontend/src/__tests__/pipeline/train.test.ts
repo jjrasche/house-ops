@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { PipelineTrace, Correction } from '../../lib/pipeline/types';
-import { applyCorrection } from '../../lib/pipeline/train';
+import type { PipelineTrace, Correction } from '@house-ops/core';
+import { applyCorrection } from '@house-ops/core';
 
 // --- Mutation-tracking mock (same pattern as execute.test.ts) ---
 

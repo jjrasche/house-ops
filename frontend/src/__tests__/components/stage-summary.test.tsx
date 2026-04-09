@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, within, cleanup } from '@testing-library/react';
 import { StageSummary } from '../../components/stage-summary';
-import type { PipelineTrace } from '../../lib/pipeline/types';
+import type { PipelineTrace } from '@house-ops/core';
 
 afterEach(cleanup);
 

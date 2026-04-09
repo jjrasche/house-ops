@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ToolCall, PipelineResult, EntityType } from './lib/pipeline/types';
-import type { PipelineOptions } from './lib/pipeline/router';
-import type { LexiconEntry } from './lib/pipeline/extract';
-import type { ToolCallExample } from './lib/pipeline/assemble';
-import { executeTool, rejectTool } from './lib/pipeline/execute';
+import type { ToolCall, PipelineResult, EntityType, PipelineOptions, LexiconEntry, ToolCallExample } from '@house-ops/core';
+import { executeTool, rejectTool } from '@house-ops/core';
 import { ChatInput } from './components/chat-input';
 import { Login } from './components/login';
 import { useAuth } from './lib/auth/use-auth';

@@ -1,4 +1,4 @@
-import type { PipelineTrace, EntityMention, ResolvedEntity } from '../lib/pipeline/types';
+import type { PipelineTrace, EntityMention, ResolvedEntity } from '@house-ops/core';
 
 // --- Public types ---
 

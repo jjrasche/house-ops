@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { EntityType } from '../lib/pipeline/types';
+import type { EntityType } from '@house-ops/core';
 import { Input } from './ui/input';
 import { Select } from './ui/select';
 import { Button } from './ui/button';
