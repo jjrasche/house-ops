@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "HouseOps",
+    "slug": "house-ops",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "house-ops",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
+    "android": {
+      "package": "fyi.jimr.houseops",
+      "permissions": [
+        "RECORD_AUDIO",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "fyi.jimr.houseops",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "HouseOps needs microphone access for voice commands and wake word detection."
+      }
+    }
+  }
+}
