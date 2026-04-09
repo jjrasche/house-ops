@@ -5,6 +5,7 @@ on:
     branches: [master, main]
     paths:
       - "frontend/**"
+      - "packages/core/**"
 
 jobs:
   build-and-push:
@@ -23,7 +24,8 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: frontend
+          context: .
+          file: frontend/Dockerfile
           push: true
           build-args: |
             VITE_SUPABASE_URL=https://api.jimr.fyi
