@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  resolve: {
+    dedupe: ['react', 'react-dom', '@supabase/supabase-js'],
+  },
   test: {
     environment: 'jsdom',
     exclude: [...configDefaults.exclude, 'src/__tests__/e2e/**'],
