@@ -1,16 +1,5 @@
 import { Platform } from 'react-native';
 
-// Android foreground service for always-on wake word listening.
-// Keeps the app alive with a persistent notification when screen is off.
-//
-// To activate:
-// 1. npm install react-native-foreground-service (or notifee for better Expo compat)
-// 2. Add to AndroidManifest.xml:
-//    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-//    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-//    <service android:name="..." android:foregroundServiceType="microphone" />
-// 3. Uncomment the implementation below
-
 interface ForegroundServiceHandle {
   start: () => Promise<void>;
   stop: () => Promise<void>;
@@ -25,20 +14,56 @@ function createNoopService(): ForegroundServiceHandle {
   };
 }
 
-// TODO: Uncomment when foreground service package is installed
-//
-// function createAndroidService(): ForegroundServiceHandle {
-//   return {
-//     async start() {
-//       // Start foreground service with "HouseOps is listening" notification
-//       // Then start Porcupine wake word detection in the service context
-//     },
-//     async stop() {
-//       // Stop wake word detection and remove notification
-//     },
-//     isAvailable: true,
-//   };
-// }
+const CHANNEL_ID = 'houseops-wake-word';
+const NOTIFICATION_ID = 'wake-word-listening';
+
+function createAndroidService(): ForegroundServiceHandle {
+  const notifee = require('@notifee/react-native').default as typeof import('@notifee/react-native')['default'];
+  const { AndroidForegroundServiceType } =
+    require('@notifee/react-native') as typeof import('@notifee/react-native');
+
+  let isRunning = false;
+
+  notifee.registerForegroundService(() => {
+    // Keep-alive promise — resolves when stop() cancels the notification
+    return new Promise<void>(() => {});
+  });
+
+  return {
+    async start() {
+      if (isRunning) return;
+
+      await notifee.createChannel({
+        id: CHANNEL_ID,
+        name: 'Wake Word Listening',
+        importance: 2, // LOW — persistent but not intrusive
+      });
+
+      await notifee.displayNotification({
+        id: NOTIFICATION_ID,
+        title: 'HouseOps is listening',
+        body: 'Say "Jarvis" to activate',
+        android: {
+          channelId: CHANNEL_ID,
+          asForegroundService: true,
+          foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_MICROPHONE],
+          ongoing: true,
+          pressAction: { id: 'default' },
+        },
+      });
+
+      isRunning = true;
+    },
+
+    async stop() {
+      if (!isRunning) return;
+      await notifee.stopForegroundService();
+      isRunning = false;
+    },
+
+    isAvailable: true,
+  };
+}
 
 export const foregroundService: ForegroundServiceHandle =
-  Platform.OS === 'android' ? createNoopService() : createNoopService();
+  Platform.OS === 'android' ? createAndroidService() : createNoopService();

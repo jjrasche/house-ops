@@ -1,4 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  VoiceProcessor,
+  type VoiceProcessorFrameListener,
+} from '@picovoice/react-native-voice-processor';
 import type { VoiceOptions, VoiceResult, ListeningState } from './types';
 import {
   DEEPGRAM_WS_URL, KEEPALIVE_INTERVAL_MS,
@@ -7,15 +11,8 @@ import {
 } from './deepgram-protocol';
 import { DEEPGRAM_API_KEY } from '../constants';
 
-// Native implementation: uses expo-av or react-native-voice-processor for audio capture.
-// For now, captures audio via the RN WebSocket + a placeholder for native audio.
-//
-// TODO: Wire @picovoice/react-native-voice-processor for raw PCM frames.
-// TODO: Add Porcupine wake word detection before activating Deepgram.
-// TODO: Add Android foreground service for background listening.
-//
-// Current state: functional STT via Deepgram, no wake word, no background.
-// The architecture is ready — swap the audio source when Porcupine SDK is added.
+const VOICE_FRAME_LENGTH = 512;
+const VOICE_SAMPLE_RATE = 16000;
 
 export function useVoice({ onTranscript, onInterim, endpointingMs = 1000 }: VoiceOptions): VoiceResult {
   const [state, setState] = useState<ListeningState>('idle');
@@ -23,6 +20,7 @@ export function useVoice({ onTranscript, onInterim, endpointingMs = 1000 }: Voic
   const wsRef = useRef<WebSocket | null>(null);
   const keepaliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const accumulatedRef = useRef('');
+  const frameListenerRef = useRef<VoiceProcessorFrameListener | null>(null);
 
   const onTranscriptRef = useRef(onTranscript);
   onTranscriptRef.current = onTranscript;
@@ -31,12 +29,19 @@ export function useVoice({ onTranscript, onInterim, endpointingMs = 1000 }: Voic
 
   const cleanup = useCallback(() => {
     if (keepaliveRef.current) { clearInterval(keepaliveRef.current); keepaliveRef.current = null; }
+
+    if (frameListenerRef.current) {
+      const vp = VoiceProcessor.instance;
+      vp.removeFrameListener(frameListenerRef.current);
+      if (vp.numFrameListeners === 0) vp.stop();
+      frameListenerRef.current = null;
+    }
+
     if (wsRef.current) {
       if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
       wsRef.current.close(); wsRef.current = null;
     }
     accumulatedRef.current = '';
-    // TODO: stop native audio capture here
   }, []);
 
   useEffect(() => cleanup, [cleanup]);
@@ -55,20 +60,14 @@ export function useVoice({ onTranscript, onInterim, endpointingMs = 1000 }: Voic
     ws.onopen = () => {
       setState('listening');
 
-      // TODO: Start @picovoice/react-native-voice-processor here.
-      // It provides raw PCM Int16 frames via a callback.
-      // Each frame is sent directly to ws.send(frame.buffer).
-      //
-      // Placeholder: without native audio capture, the WebSocket stays open
-      // but receives no audio. Install the voice processor to activate:
-      //
-      //   import { VoiceProcessor } from '@picovoice/react-native-voice-processor';
-      //   VoiceProcessor.start(512, 16000).then(() => {
-      //     VoiceProcessor.addFrameListener((frame: number[]) => {
-      //       const int16 = new Int16Array(frame);
-      //       if (ws.readyState === WebSocket.OPEN) ws.send(int16.buffer);
-      //     });
-      //   });
+      const vp = VoiceProcessor.instance;
+      const listener: VoiceProcessorFrameListener = (frame: number[]) => {
+        const int16 = new Int16Array(frame);
+        if (ws.readyState === WebSocket.OPEN) ws.send(int16.buffer);
+      };
+      frameListenerRef.current = listener;
+      vp.addFrameListener(listener);
+      vp.start(VOICE_FRAME_LENGTH, VOICE_SAMPLE_RATE);
 
       keepaliveRef.current = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'KeepAlive' }));
@@ -101,7 +100,6 @@ export function useVoice({ onTranscript, onInterim, endpointingMs = 1000 }: Voic
     if (accumulatedRef.current.trim()) onTranscriptRef.current(accumulatedRef.current.trim());
     cleanup();
     setState('idle');
-    // TODO: VoiceProcessor.stop();
   }, [cleanup]);
 
   return { state, startListening, stopListening };

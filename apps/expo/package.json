@@ -11,8 +11,12 @@
   },
   "dependencies": {
     "@house-ops/core": "*",
+    "@notifee/react-native": "^9.1.8",
+    "@picovoice/porcupine-react-native": "^4.0.0",
+    "@picovoice/react-native-voice-processor": "^1.2.3",
     "@supabase/supabase-js": "^2.100.1",
     "expo": "~52.0.0",
+    "expo-build-properties": "^55.0.12",
     "expo-constants": "~17.0.0",
     "expo-linking": "~7.0.0",
     "expo-router": "~4.0.0",
