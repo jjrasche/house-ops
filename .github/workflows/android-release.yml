@@ -1,0 +1,14 @@
+name: Android Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+jobs:
+  release:
+    uses: jjrasche/platform/.github/workflows/android-deploy.yml@master
+    with:
+      app_slug: houseops
+      app_dir: apps/expo
+      min_version: '0.1.0'
+    secrets: inherit
