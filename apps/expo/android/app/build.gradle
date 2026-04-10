@@ -127,7 +127,7 @@ android {
     // Shorten CMake intermediate paths — ninja 260-char limit on Windows
     externalNativeBuild {
         cmake {
-            buildStagingDirectory = file("C:/tmp/cxx/app")
+            buildStagingDirectory = file("${System.getProperty('java.io.tmpdir')}/cxx/app")
         }
     }
 }
