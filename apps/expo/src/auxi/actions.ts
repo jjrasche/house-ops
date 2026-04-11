@@ -22,6 +22,7 @@ export interface ShellState {
   setFeedback: (feedback: { kind: "success" } | { kind: "error"; message: string } | null) => void;
   toggleVoice: () => void;
   refreshSources: () => void;
+  showEntityResolver: () => void;
 }
 
 export function buildActionRegistry(shell: ShellState): ActionRegistry {
@@ -30,6 +31,7 @@ export function buildActionRegistry(shell: ShellState): ActionRegistry {
     confirm: createConfirmAction(shell),
     reject: createRejectAction(shell),
     toggle_voice: createToggleVoiceAction(shell),
+    resolve_entity: createResolveEntityAction(shell),
   };
 }
 
@@ -89,6 +91,12 @@ function createRejectAction(shell: ShellState) {
 function createToggleVoiceAction(shell: ShellState) {
   return async (_params: Record<string, unknown>) => {
     shell.toggleVoice();
+  };
+}
+
+function createResolveEntityAction(shell: ShellState) {
+  return async (_params: Record<string, unknown>) => {
+    shell.showEntityResolver();
   };
 }
 

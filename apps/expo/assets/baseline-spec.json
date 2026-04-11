@@ -156,6 +156,38 @@
                 ]
               },
               {
+                "id": "unresolved-section",
+                "type": "column",
+                "props": {
+                  "gap": 8,
+                  "padding": 16
+                },
+                "visible": "{shell.hasUnresolved}",
+                "children": [
+                  {
+                    "id": "unresolved-warning",
+                    "type": "text",
+                    "props": {
+                      "value": "{shell.unresolvedWarning}",
+                      "variant": "caption",
+                      "color": "#eab308"
+                    }
+                  },
+                  {
+                    "id": "resolve-button",
+                    "type": "button",
+                    "props": {
+                      "label": "Add to database",
+                      "variant": "outline",
+                      "size": "sm"
+                    },
+                    "action": {
+                      "action": "resolve_entity"
+                    }
+                  }
+                ]
+              },
+              {
                 "id": "params-divider",
                 "type": "divider"
               },

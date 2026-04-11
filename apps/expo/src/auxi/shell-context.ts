@@ -34,6 +34,8 @@ export function buildShellContext(input: ShellContextInput): Record<string, unkn
       stageTool: formatStageTool(pipelineResult),
       hasTool: pipelineResult?.trace.toolName != null,
       paramsSummary: formatParamsSummary(pipelineResult),
+      hasUnresolved: (pipelineResult?.unresolved.length ?? 0) > 0,
+      unresolvedWarning: formatUnresolvedWarning(pipelineResult),
       feedbackSuccess: feedback?.kind === "success",
       hasFeedbackError: feedback?.kind === "error",
       feedbackError: feedback?.kind === "error" ? feedback.message ?? "Unknown error" : "",
@@ -87,6 +89,12 @@ function formatStageMatched(result: PipelineResult | null): string {
 function formatStageTool(result: PipelineResult | null): string {
   if (!result?.trace.toolName) return "";
   return `Tool: ${result.trace.toolName}`;
+}
+
+function formatUnresolvedWarning(result: PipelineResult | null): string {
+  if (!result || result.unresolved.length === 0) return "";
+  const names = result.unresolved.map((m) => `"${m}"`).join(", ");
+  return `Unknown: ${names} — tap to add`;
 }
 
 function formatParamsSummary(result: PipelineResult | null): string {
