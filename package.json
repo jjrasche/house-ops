@@ -4,5 +4,13 @@
     "packages/*",
     "apps/*",
     "frontend"
-  ]
+  ],
+  "overrides": {
+    "auxi": {
+      "@supabase/supabase-js": "$@supabase/supabase-js"
+    }
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.100.1"
+  }
 }

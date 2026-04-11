@@ -23,7 +23,9 @@ export const specStorage: SpecStorage = {
 
 /**
  * Dev signature verifier — always passes.
- * Replace with Ed25519 verification for production.
+ * TODO(SECURITY): Replace with Ed25519 verification before OTA spec delivery.
+ * Tracked in next-task handoff: "Dev signature verifier — needs Ed25519 before OTA spec delivery."
+ * Risk: anyone who can write to ui_specs controls the entire app UI.
  */
 export const devSignatureVerifier: SignatureVerifier = {
   async verify(_specHash: string, _signature: string): Promise<boolean> {
