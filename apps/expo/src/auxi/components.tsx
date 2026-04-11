@@ -43,11 +43,12 @@ const ScrollViewRenderer: ComponentRenderer = (props, children) => (
 const GridRenderer: ComponentRenderer = (props, children) => {
   const columns = (props.columns as number) ?? 2;
   const gap = (props.gap as number) ?? spacing.sm;
+  const cellBasis = `${100 / columns}%` as `${number}%`;
   return (
     <View style={[styles.grid, { gap }]} key={props.key as string}>
       {Array.isArray(children)
         ? children.map((child, i) => (
-            <View key={i} style={{ width: `${100 / columns}%` as unknown as number }}>
+            <View key={i} style={{ flexBasis: cellBasis, flexGrow: 0, flexShrink: 0 }}>
               {child}
             </View>
           ))

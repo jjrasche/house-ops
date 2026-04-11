@@ -30,7 +30,6 @@ export function buildActionRegistry(shell: ShellState): ActionRegistry {
     confirm: createConfirmAction(shell),
     reject: createRejectAction(shell),
     toggle_voice: createToggleVoiceAction(shell),
-    navigate: createNavigateAction(),
   };
 }
 
@@ -93,12 +92,3 @@ function createToggleVoiceAction(shell: ShellState) {
   };
 }
 
-function createNavigateAction() {
-  return async (params: Record<string, unknown>) => {
-    const target = params.target as string | undefined;
-    if (!target) return;
-    // Navigation is handled by the shell via expo-router
-    // For now, log intent — shell will wire this to router.push()
-    console.log(`auxi: navigate to "${target}"`);
-  };
-}

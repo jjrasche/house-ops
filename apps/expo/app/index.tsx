@@ -1,7 +1,6 @@
 import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
-import { useState, useCallback, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import type { PipelineOptions, PipelineResult, LexiconEntry, ToolCallExample, EntityType } from "@house-ops/core";
-import { runPipeline } from "@house-ops/core";
 import { renderSpec, resolveAllSources, type AuxiSpec, type RenderContext } from "auxi/sdui";
 import { componentRegistry } from "../src/auxi/components";
 import { buildSourceRegistry } from "../src/auxi/sources";
@@ -38,32 +37,14 @@ export default function ShellScreen() {
 
   // --- Voice ---
   const [voiceActive, setVoiceActive] = useState(false);
-
-  const submitTextDirect = useCallback(
-    async (text: string) => {
-      const trimmed = text.trim();
-      if (trimmed === "" || isProcessing) return;
-      setIsProcessing(true);
-      setPipelineResult(null);
-      setFeedback(null);
-      const result = await runPipeline(trimmed, {
-        supabase,
-        householdId: HOUSEHOLD_ID,
-        lexicon,
-        toolCallExamples,
-      });
-      setPipelineResult(result);
-      setIsProcessing(false);
-    },
-    [isProcessing, lexicon, toolCallExamples],
-  );
+  const actionRegistryRef = useRef<Record<string, (params: Record<string, unknown>) => void | Promise<void>>>({});
 
   const handleVoiceTranscript = useCallback(
     (transcript: string) => {
       setInputText(transcript);
-      submitTextDirect(transcript);
+      actionRegistryRef.current.submit?.({ text: transcript });
     },
-    [submitTextDirect],
+    [],
   );
 
   const handleVoiceInterim = useCallback((interim: string) => {
@@ -153,7 +134,11 @@ export default function ShellScreen() {
     [inputText, pipelineResult, isProcessing, voiceActive, pipelineOptions, toggleVoice, refreshSources],
   );
 
-  const actionRegistry = useMemo(() => buildActionRegistry(shellState), [shellState]);
+  const actionRegistry = useMemo(() => {
+    const registry = buildActionRegistry(shellState);
+    actionRegistryRef.current = registry;
+    return registry;
+  }, [shellState]);
 
   // --- Build render context ---
   const shellContext = useMemo(
