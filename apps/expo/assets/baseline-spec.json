@@ -1,0 +1,248 @@
+{
+  "spec_version": 1,
+  "renderer_min": 1,
+  "root": {
+    "id": "root",
+    "type": "column",
+    "props": {
+      "flex": 1,
+      "padding": 16,
+      "justify": "center",
+      "align": "center",
+      "gap": 16
+    },
+    "children": [
+      {
+        "id": "header",
+        "type": "text",
+        "props": {
+          "value": "HouseOps",
+          "variant": "heading",
+          "align": "center"
+        }
+      },
+      {
+        "id": "input-area",
+        "type": "column",
+        "props": {
+          "gap": 12,
+          "align": "stretch"
+        },
+        "children": [
+          {
+            "id": "input-row",
+            "type": "row",
+            "props": {
+              "gap": 8,
+              "align": "center"
+            },
+            "children": [
+              {
+                "id": "omnibox",
+                "type": "textinput",
+                "props": {
+                  "placeholder": "What do you need?",
+                  "flex": 1
+                },
+                "action": {
+                  "action": "submit"
+                }
+              },
+              {
+                "id": "mic-button",
+                "type": "button",
+                "props": {
+                  "label": "Mic",
+                  "variant": "secondary",
+                  "size": "sm"
+                },
+                "action": {
+                  "action": "toggle_voice"
+                }
+              },
+              {
+                "id": "send-button",
+                "type": "button",
+                "props": {
+                  "label": "Send",
+                  "variant": "primary",
+                  "size": "sm"
+                },
+                "action": {
+                  "action": "submit"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "result-area",
+        "type": "column",
+        "props": {
+          "gap": 12,
+          "align": "stretch"
+        },
+        "visible": "{shell.hasResult}",
+        "children": [
+          {
+            "id": "result-card",
+            "type": "card",
+            "props": {
+              "variant": "outlined"
+            },
+            "children": [
+              {
+                "id": "result-header",
+                "type": "row",
+                "props": {
+                  "justify": "between",
+                  "align": "center",
+                  "padding": 16
+                },
+                "children": [
+                  {
+                    "id": "result-title",
+                    "type": "text",
+                    "props": {
+                      "value": "{shell.resultTitle}",
+                      "variant": "subheading"
+                    }
+                  },
+                  {
+                    "id": "confidence-badge",
+                    "type": "chip",
+                    "props": {
+                      "label": "{shell.confidenceLabel}",
+                      "variant": "filled",
+                      "selected": true
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "stage-summary",
+                "type": "column",
+                "props": {
+                  "gap": 4,
+                  "padding": 16
+                },
+                "children": [
+                  {
+                    "id": "stage-heard",
+                    "type": "text",
+                    "props": {
+                      "value": "{shell.stageHeard}",
+                      "variant": "caption"
+                    }
+                  },
+                  {
+                    "id": "stage-matched",
+                    "type": "text",
+                    "props": {
+                      "value": "{shell.stageMatched}",
+                      "variant": "caption"
+                    }
+                  },
+                  {
+                    "id": "stage-tool",
+                    "type": "text",
+                    "props": {
+                      "value": "{shell.stageTool}",
+                      "variant": "caption"
+                    },
+                    "visible": "{shell.hasTool}"
+                  }
+                ]
+              },
+              {
+                "id": "params-divider",
+                "type": "divider"
+              },
+              {
+                "id": "param-list",
+                "type": "column",
+                "props": {
+                  "gap": 4,
+                  "padding": 16
+                },
+                "children": [
+                  {
+                    "id": "params-text",
+                    "type": "text",
+                    "props": {
+                      "value": "{shell.paramsSummary}",
+                      "variant": "body"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "action-buttons",
+                "type": "row",
+                "props": {
+                  "gap": 8,
+                  "padding": 16
+                },
+                "children": [
+                  {
+                    "id": "confirm-button",
+                    "type": "button",
+                    "props": {
+                      "label": "Confirm",
+                      "variant": "primary"
+                    },
+                    "action": {
+                      "action": "confirm"
+                    }
+                  },
+                  {
+                    "id": "reject-button",
+                    "type": "button",
+                    "props": {
+                      "label": "Reject",
+                      "variant": "ghost"
+                    },
+                    "action": {
+                      "action": "reject"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "feedback-success",
+        "type": "text",
+        "props": {
+          "value": "Done!",
+          "variant": "body",
+          "color": "#16a34a"
+        },
+        "visible": "{shell.feedbackSuccess}"
+      },
+      {
+        "id": "feedback-error",
+        "type": "text",
+        "props": {
+          "value": "{shell.feedbackError}",
+          "variant": "body",
+          "color": "#ef4444"
+        },
+        "visible": "{shell.hasFeedbackError}"
+      },
+      {
+        "id": "processing-indicator",
+        "type": "text",
+        "props": {
+          "value": "Processing...",
+          "variant": "caption",
+          "align": "center"
+        },
+        "visible": "{shell.isProcessing}"
+      }
+    ]
+  }
+}
