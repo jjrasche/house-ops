@@ -1,64 +1,21 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { SpecStorage, SignatureVerifier, DataSourceCache } from "auxi/sdui";
-import type { SignedSpec, AuxiSpec } from "auxi/sdui";
+import {
+  createSpecStorage,
+  createDataSourceCache,
+  devSignatureVerifier,
+  type KVStorage,
+} from "auxi";
 
 /**
- * AsyncStorage-backed spec storage.
- * Stores the active signed spec as JSON.
+ * AsyncStorage adapter for auxi's generic KVStorage interface.
  */
-
-const ACTIVE_SPEC_KEY = "auxi:active-spec";
-
-export const specStorage: SpecStorage = {
-  async loadActive(): Promise<SignedSpec | null> {
-    const raw = await AsyncStorage.getItem(ACTIVE_SPEC_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as SignedSpec;
-  },
-
-  async saveActive(signed: SignedSpec): Promise<void> {
-    await AsyncStorage.setItem(ACTIVE_SPEC_KEY, JSON.stringify(signed));
-  },
+const asyncKV: KVStorage = {
+  getItem: (key) => AsyncStorage.getItem(key),
+  setItem: (key, value) => AsyncStorage.setItem(key, value),
+  removeItem: (key) => AsyncStorage.removeItem(key),
 };
 
-/**
- * Dev signature verifier — always passes.
- * TODO(SECURITY): Replace with Ed25519 verification before OTA spec delivery.
- * Tracked in next-task handoff: "Dev signature verifier — needs Ed25519 before OTA spec delivery."
- * Risk: anyone who can write to ui_specs controls the entire app UI.
- */
-export const devSignatureVerifier: SignatureVerifier = {
-  async verify(_specHash: string, _signature: string): Promise<boolean> {
-    return true;
-  },
+export const specStorage = createSpecStorage(asyncKV);
+export const dataSourceCache = createDataSourceCache(asyncKV);
 
-  async computeHash(spec: AuxiSpec): Promise<string> {
-    const json = JSON.stringify(spec);
-    // Simple hash for dev — production uses Ed25519 over SHA-256
-    let hash = 0;
-    for (let i = 0; i < json.length; i++) {
-      const char = json.charCodeAt(i);
-      hash = ((hash << 5) - hash + char) | 0;
-    }
-    return `dev:${hash.toString(16)}`;
-  },
-};
-
-/**
- * AsyncStorage-backed data source cache.
- * Caches resolved source data for offline rendering.
- */
-
-const SOURCE_CACHE_PREFIX = "auxi:source:";
-
-export const dataSourceCache: DataSourceCache = {
-  async load(key: string): Promise<unknown | null> {
-    const raw = await AsyncStorage.getItem(SOURCE_CACHE_PREFIX + key);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  },
-
-  async save(key: string, data: unknown): Promise<void> {
-    await AsyncStorage.setItem(SOURCE_CACHE_PREFIX + key, JSON.stringify(data));
-  },
-};
+export { devSignatureVerifier };

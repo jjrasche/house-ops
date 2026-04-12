@@ -4,7 +4,7 @@ import { useVoice } from "../lib/voice/use-voice";
 import { supabase } from "../lib/supabase";
 import { HOUSEHOLD_ID } from "../lib/constants";
 import { buildActionRegistry, type ShellState } from "./actions";
-import type { ActionRegistry } from "auxi/sdui";
+import type { ActionRegistry } from "auxi";
 import type { LexiconState } from "./use-lexicon";
 
 type FeedbackState = { kind: "success" } | { kind: "error"; message: string } | null;

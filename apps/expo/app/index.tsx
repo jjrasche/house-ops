@@ -2,28 +2,38 @@ import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useCallback, useEffect, useMemo, type ReactNode } from "react";
 import type { EntityType } from "@house-ops/core";
 import { createEntity, runPipeline } from "@house-ops/core";
-import { renderSpec, type AuxiSpec, type RenderContext } from "auxi/sdui";
-import { componentRegistry } from "../src/auxi/components";
+import {
+  renderSpec,
+  createComponentRegistry,
+  useSourceData,
+  type AuxiSpec,
+  type RenderContext,
+  type ThemeTokens,
+} from "auxi";
 import { buildShellContext } from "../src/auxi/shell-context";
 import { useLexicon } from "../src/auxi/use-lexicon";
-import { useSourceData } from "../src/auxi/use-source-data";
+import { dataSourceCache } from "../src/auxi/storage";
 import { usePipeline } from "../src/auxi/use-pipeline";
 import { EntityResolver } from "../src/components/entity-resolver";
 import { useAuth } from "../src/lib/use-auth";
 import { supabase, isLocalDev } from "../src/lib/supabase";
 import { HOUSEHOLD_ID } from "../src/lib/constants";
 import { LoginScreen } from "../src/screens/login";
-import { colors, fontSize, spacing } from "../src/lib/theme";
+import { colors, fontSize, spacing, radius } from "../src/lib/theme";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const baselineSpecJson = require("../assets/baseline-spec.json");
 const baselineSpec = baselineSpecJson as AuxiSpec;
+
+const theme: ThemeTokens = { colors, spacing, fontSize, radius };
+const componentRegistry = createComponentRegistry(theme);
+const emptySourceRegistry = () => ({});
 
 export default function ShellScreen() {
   const authState = useAuth();
   const isAuthenticated = isLocalDev || authState.status === "authenticated";
 
   const lexiconState = useLexicon();
-  const { sourceData, sourcesLoaded, refreshSources } = useSourceData();
+  const { sourceData, sourcesLoaded, refreshSources } = useSourceData(emptySourceRegistry, dataSourceCache);
   const pipeline = usePipeline(lexiconState, refreshSources);
 
   useEffect(() => {

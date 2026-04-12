@@ -1,4 +1,4 @@
-import type { ActionRegistry } from "auxi/sdui";
+import type { ActionRegistry } from "auxi";
 import type { PipelineOptions, PipelineResult, ToolCall, ExecuteResult } from "@house-ops/core";
 import { runPipeline, executeTool, rejectTool } from "@house-ops/core";
 import { supabase } from "../lib/supabase";

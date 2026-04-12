@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { componentRegistry } from "../components";
-import type { SpecNodeType } from "auxi/sdui";
+import { createComponentRegistry, type SpecNodeType, type ThemeTokens } from "auxi";
+import { colors, fontSize, spacing, radius } from "../../lib/theme";
+
+const theme: ThemeTokens = { colors, spacing, fontSize, radius };
+const componentRegistry = createComponentRegistry(theme);
 
 /**
  * Smoke tests for the component registry.
