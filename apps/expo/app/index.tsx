@@ -2,14 +2,9 @@ import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useCallback, useEffect, useMemo, type ReactNode } from "react";
 import type { EntityType } from "@house-ops/core";
 import { createEntity, runPipeline } from "@house-ops/core";
-import {
-  renderSpec,
-  createComponentRegistry,
-  useSourceData,
-  type AuxiSpec,
-  type RenderContext,
-  type ThemeTokens,
-} from "auxi";
+import { renderSpec, useSourceData, type RenderContext } from "@factoredui/react";
+import { createComponentRegistry, type ThemeTokens } from "@factoredui/react-native";
+import type { AuxiSpec } from "@factoredui/core";
 import { buildShellContext } from "../src/auxi/shell-context";
 import { useLexicon } from "../src/auxi/use-lexicon";
 import { dataSourceCache } from "../src/auxi/storage";

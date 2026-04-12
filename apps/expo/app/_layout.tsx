@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AuxiProvider } from "auxi";
+import { AuxiProvider } from "@factoredui/react";
 import { supabase } from "../src/lib/supabase";
 import { createExpoCaptureAdapter } from "../src/auxi/capture-adapter";
 

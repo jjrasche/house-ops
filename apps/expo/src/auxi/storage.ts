@@ -4,7 +4,7 @@ import {
   createDataSourceCache,
   devSignatureVerifier,
   type KVStorage,
-} from "auxi";
+} from "@factoredui/core";
 
 /**
  * AsyncStorage adapter for auxi's generic KVStorage interface.

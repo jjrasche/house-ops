@@ -1,7 +1,7 @@
 import { AppState, Dimensions, Platform, type AppStateStatus } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Application from "expo-application";
-import type { CaptureAdapter, AuxiEvent } from "auxi";
+import type { CaptureAdapter, AuxiEvent } from "@factoredui/core";
 
 const SESSION_KEY = "auxi:session_id";
 

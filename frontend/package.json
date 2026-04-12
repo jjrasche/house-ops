@@ -28,7 +28,8 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
     "vite-plugin-pwa": "^1.2.0",
-    "auxi": "^0.2.0"
+    "@factoredui/core": "^0.1.0",
+    "@factoredui/react": "^0.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

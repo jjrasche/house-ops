@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { AuxiProvider, createWebAdapter } from 'auxi'
+import { AuxiProvider } from '@factoredui/react'
+import { createWebAdapter } from '@factoredui/core'
 import { auxiSupabase } from './lib/supabase.ts'
 import './index.css'
 import App from './App.tsx'

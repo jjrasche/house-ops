@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createComponentRegistry, type SpecNodeType, type ThemeTokens } from "auxi";
+import { createComponentRegistry, type ThemeTokens } from "@factoredui/react-native";
+import type { SpecNodeType } from "@factoredui/core";
 import { colors, fontSize, spacing, radius } from "../../lib/theme";
 
 const theme: ThemeTokens = { colors, spacing, fontSize, radius };

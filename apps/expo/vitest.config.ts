@@ -5,6 +5,11 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/auxi/__tests__/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    server: {
+      deps: {
+        inline: [/@factoredui\//],
+      },
+    },
   },
   resolve: {
     alias: {

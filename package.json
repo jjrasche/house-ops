@@ -5,12 +5,9 @@
     "apps/*",
     "frontend"
   ],
-  "overrides": {
-    "auxi": {
-      "@supabase/supabase-js": "$@supabase/supabase-js"
-    }
-  },
+  "overrides": {},
   "dependencies": {
-    "@supabase/supabase-js": "^2.100.1"
+    "@supabase/supabase-js": "^2.103.0",
+    "react-native-worklets": "^0.8.1"
   }
 }
