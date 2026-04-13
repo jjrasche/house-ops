@@ -13,8 +13,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: { schema: (isLocalDev ? 'public' : 'house_ops') as 'public' },
 })
 
-// Auxi client — queries auxi schema for behavioral capture
+// FactoredUI client — queries factoredui schema for behavioral capture
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const auxiSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-  db: { schema: 'auxi' as 'public' },
+  db: { schema: 'factoredui' as 'public' },
 })

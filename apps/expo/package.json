@@ -12,15 +12,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@factoredui/core": "^0.2.0",
+    "@factoredui/react": "^0.2.0",
+    "@factoredui/react-native": "^0.2.0",
     "@house-ops/core": "*",
     "@notifee/react-native": "^9.1.8",
     "@picovoice/porcupine-react-native": "^4.0.0",
     "@picovoice/react-native-voice-processor": "^1.2.3",
     "@react-native-async-storage/async-storage": "^2.1.0",
     "@supabase/supabase-js": "^2.100.1",
-    "@factoredui/core": "^0.1.0",
-    "@factoredui/react": "^0.1.0",
-    "@factoredui/react-native": "^0.1.0",
     "expo": "^55.0.14",
     "expo-application": "~55.0.14",
     "expo-build-properties": "~55.0.13",

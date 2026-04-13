@@ -93,7 +93,7 @@ describe("createExpoCaptureAdapter", () => {
     const adapter = createExpoCaptureAdapter();
     adapter.storeSessionId("sess-123");
 
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith("auxi:session_id", "sess-123");
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith("factoredui:session_id", "sess-123");
   });
 
   it("loadSessionId returns null (async storage is non-blocking)", () => {
@@ -105,7 +105,7 @@ describe("createExpoCaptureAdapter", () => {
     const adapter = createExpoCaptureAdapter();
     adapter.clearSessionId();
 
-    expect(AsyncStorage.removeItem).toHaveBeenCalledWith("auxi:session_id");
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith("factoredui:session_id");
   });
 
   it("registerUnloadHandler listens for app state background", () => {

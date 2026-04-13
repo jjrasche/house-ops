@@ -1,21 +1,21 @@
 import { AppState, Dimensions, Platform, type AppStateStatus } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Application from "expo-application";
-import type { CaptureAdapter, AuxiEvent } from "@factoredui/core";
+import type { CaptureAdapter, CaptureEvent } from "@factoredui/core";
 
-const SESSION_KEY = "auxi:session_id";
+const SESSION_KEY = "factoredui:session_id";
 
 /**
  * React Native CaptureAdapter for Expo.
  * Captures: JS errors, app state transitions, device metadata.
- * Touch/navigation events flow through AuxiPage/AuxiComponent context.
+ * Touch/navigation events flow through Page/Component context.
  */
 export function createExpoCaptureAdapter(): CaptureAdapter {
-  let emitEvent: ((event: AuxiEvent) => void) | null = null;
+  let emitEvent: ((event: CaptureEvent) => void) | null = null;
   let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
   let previousErrorHandler: ((error: Error, isFatal?: boolean) => void) | null = null;
 
-  function startListening(onEvent: (event: AuxiEvent) => void): void {
+  function startListening(onEvent: (event: CaptureEvent) => void): void {
     emitEvent = onEvent;
     previousErrorHandler = ErrorUtils.getGlobalHandler();
     attachErrorCapture(onEvent);
@@ -82,7 +82,7 @@ export function createExpoCaptureAdapter(): CaptureAdapter {
 // --- Leaf functions ---
 
 function attachErrorCapture(
-  onEvent: (event: AuxiEvent) => void,
+  onEvent: (event: CaptureEvent) => void,
 ): void {
   const originalHandler = ErrorUtils.getGlobalHandler();
 
@@ -110,7 +110,7 @@ function detachErrorCapture(
 }
 
 function attachAppStateCapture(
-  onEvent: (event: AuxiEvent) => void,
+  onEvent: (event: CaptureEvent) => void,
 ): ReturnType<typeof AppState.addEventListener> {
   return AppState.addEventListener("change", (nextState: AppStateStatus) => {
     onEvent({
@@ -122,5 +122,5 @@ function attachAppStateCapture(
 }
 
 function logStorageError(err: unknown): void {
-  console.warn("auxi: AsyncStorage error:", err);
+  console.warn("factoredui: AsyncStorage error:", err);
 }

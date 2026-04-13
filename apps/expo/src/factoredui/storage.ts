@@ -7,7 +7,7 @@ import {
 } from "@factoredui/core";
 
 /**
- * AsyncStorage adapter for auxi's generic KVStorage interface.
+ * AsyncStorage adapter for FactoredUI's generic KVStorage interface.
  */
 const asyncKV: KVStorage = {
   getItem: (key) => AsyncStorage.getItem(key),

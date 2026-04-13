@@ -4,12 +4,12 @@ const path = require('path');
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, '../..');
 
-const auxiRoot = path.resolve(monorepoRoot, '..', 'auxi');
+const factoredUiRoot = path.resolve(monorepoRoot, '..', 'factoredui');
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the monorepo root and auxi source for live changes
-config.watchFolders = [monorepoRoot, auxiRoot];
+// Watch the monorepo root and factoredui source for live changes
+config.watchFolders = [monorepoRoot, factoredUiRoot];
 
 // Resolve packages from both the app and the monorepo root
 config.resolver.nodeModulesPaths = [
@@ -17,9 +17,9 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
-// Force auxi subpath imports to resolve from the source repo, not the stale hoisted copy
+// Force factoredui subpath imports to resolve from the source repo, not the stale hoisted copy
 config.resolver.extraNodeModules = {
-  auxi: auxiRoot,
+  factoredui: factoredUiRoot,
 };
 
 module.exports = config;

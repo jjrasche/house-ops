@@ -4,11 +4,11 @@ import type { EntityType } from "@house-ops/core";
 import { createEntity, runPipeline } from "@house-ops/core";
 import { renderSpec, useSourceData, type RenderContext } from "@factoredui/react";
 import { createComponentRegistry, type ThemeTokens } from "@factoredui/react-native";
-import type { AuxiSpec } from "@factoredui/core";
-import { buildShellContext } from "../src/auxi/shell-context";
-import { useLexicon } from "../src/auxi/use-lexicon";
-import { dataSourceCache } from "../src/auxi/storage";
-import { usePipeline } from "../src/auxi/use-pipeline";
+import type { Spec } from "@factoredui/core";
+import { buildShellContext } from "../src/factoredui/shell-context";
+import { useLexicon } from "../src/factoredui/use-lexicon";
+import { dataSourceCache } from "../src/factoredui/storage";
+import { usePipeline } from "../src/factoredui/use-pipeline";
 import { EntityResolver } from "../src/components/entity-resolver";
 import { useAuth } from "../src/lib/use-auth";
 import { supabase, isLocalDev } from "../src/lib/supabase";
@@ -17,7 +17,7 @@ import { LoginScreen } from "../src/screens/login";
 import { colors, fontSize, spacing, radius } from "../src/lib/theme";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const baselineSpecJson = require("../assets/baseline-spec.json");
-const baselineSpec = baselineSpecJson as AuxiSpec;
+const baselineSpec = baselineSpecJson as Spec;
 
 const theme: ThemeTokens = { colors, spacing, fontSize, radius };
 const componentRegistry = createComponentRegistry(theme);
