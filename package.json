@@ -2,8 +2,7 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "apps/*",
-    "frontend"
+    "apps/*"
   ],
   "overrides": {},
   "dependencies": {

@@ -1,10 +1,10 @@
-name: Deploy
+name: Deploy Web
 on:
   workflow_dispatch:
   push:
     branches: [master, main]
     paths:
-      - "frontend/**"
+      - "apps/expo/**"
       - "packages/core/**"
 
 jobs:
@@ -25,12 +25,11 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          file: frontend/Dockerfile
+          file: Dockerfile
           push: true
           build-args: |
-            VITE_SUPABASE_URL=https://api.jimr.fyi
-            VITE_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-            VITE_DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}
+            EXPO_PUBLIC_SUPABASE_URL=https://api.jimr.fyi
+            EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}

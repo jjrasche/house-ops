@@ -12,9 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@factoredui/core": "^0.2.0",
-    "@factoredui/react": "^0.2.0",
-    "@factoredui/react-native": "^0.2.0",
+    "@factoredui/adapter-supabase": "file:../../../factored-ui/packages/adapter-supabase",
+    "@factoredui/core": "file:../../../factored-ui/packages/core",
+    "@factoredui/react": "file:../../../factored-ui/packages/react",
+    "@factoredui/react-native": "file:../../../factored-ui/packages/react-native",
     "@house-ops/core": "*",
     "@notifee/react-native": "^9.1.8",
     "@picovoice/porcupine-react-native": "^4.0.0",
