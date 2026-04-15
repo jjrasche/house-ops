@@ -4,6 +4,7 @@
     "strict": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    "preserveSymlinks": true,
     "paths": {
       "@/*": ["./src/*"],
       "@house-ops/core": ["../../packages/core/src/index"]
