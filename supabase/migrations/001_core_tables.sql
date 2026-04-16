@@ -16,10 +16,6 @@ create table households (
 
 alter table households enable row level security;
 
-create policy "members see own household"
-  on households for select
-  using (id in (select household_id from profiles where id = auth.uid()));
-
 -- Profiles (linked to Supabase auth.users) ------------------------------------
 
 create table profiles (
@@ -30,6 +26,12 @@ create table profiles (
 );
 
 alter table profiles enable row level security;
+
+-- RLS policies that reference profiles (must come after profiles table) -------
+
+create policy "members see own household"
+  on households for select
+  using (id in (select household_id from profiles where id = auth.uid()));
 
 create policy "users see own profile"
   on profiles for select using (id = auth.uid());

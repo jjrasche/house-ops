@@ -12,6 +12,12 @@ export { createEntity } from './pipeline/create-entity';
 // Supabase factory
 export { createSupabaseClient, isLocalDev } from './supabase';
 
+// Agent: observation → reason → action loop
+export { subscribeObservations } from './agent/subscribe-observations';
+export { writeAction } from './agent/write-action';
+export { handleAutomationIntent } from './agent/handle-intent';
+export { matchBedtimeIntent, buildBedtimeActions } from './agent/rules/bedtime';
+
 // Types
 export type {
   EntityType, PipelinePath, UserVerdict, TrainingSource,
@@ -41,3 +47,11 @@ export type { PipelineOptions } from './pipeline/router';
 export type { TrainOptions } from './pipeline/train';
 export type { CreateEntityOptions, CreatedEntity } from './pipeline/create-entity';
 export type { SupabaseConfig } from './supabase';
+
+// Agent types
+export type {
+  ActionType, ActionPriority, ActionStatus,
+  AgentAction, Observation, ObservationHandler, Unsubscribe,
+} from './agent/types';
+export type { WriteActionResult } from './agent/write-action';
+export type { IntentResult } from './agent/handle-intent';

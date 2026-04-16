@@ -9,7 +9,7 @@ import {
 /**
  * AsyncStorage adapter for FactoredUI's generic KVStorage interface.
  */
-const asyncKV: KVStorage = {
+export const asyncKV: KVStorage = {
   getItem: (key) => AsyncStorage.getItem(key),
   setItem: (key, value) => AsyncStorage.setItem(key, value),
   removeItem: (key) => AsyncStorage.removeItem(key),

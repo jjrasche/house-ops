@@ -1,6 +1,6 @@
 import type { ActionRegistry } from "@factoredui/core";
-import type { PipelineOptions, PipelineResult, ToolCall, ExecuteResult } from "@house-ops/core";
-import { runPipeline, executeTool, rejectTool } from "@house-ops/core";
+import type { PipelineOptions, PipelineResult, ExecuteResult } from "@house-ops/core";
+import { runPipeline, executeTool, rejectTool, handleAutomationIntent } from "@house-ops/core";
 import { supabase } from "../lib/supabase";
 import { HOUSEHOLD_ID } from "../lib/constants";
 
@@ -35,6 +35,13 @@ export function buildActionRegistry(shell: ShellState): ActionRegistry {
   };
 }
 
+const LOCAL_DEV_USER_ID = "00000000-0000-0000-0000-000000000000";
+
+async function resolveUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? LOCAL_DEV_USER_ID;
+}
+
 function createSubmitAction(shell: ShellState) {
   return async (params: Record<string, unknown>) => {
     const text = (params.text as string) ?? shell.inputText;
@@ -44,6 +51,19 @@ function createSubmitAction(shell: ShellState) {
     shell.setIsProcessing(true);
     shell.setPipelineResult(null);
     shell.setFeedback(null);
+
+    const userId = await resolveUserId();
+    const intentResult = await handleAutomationIntent(trimmed, userId, supabase);
+
+    if (intentResult.handled) {
+      const allSucceeded = intentResult.actions.every(a => a.success);
+      shell.setFeedback(allSucceeded
+        ? { kind: "success" }
+        : { kind: "error", message: "Failed to write agent action" });
+      shell.setInputText("");
+      shell.setIsProcessing(false);
+      return;
+    }
 
     const result = await runPipeline(trimmed, shell.pipelineOptions);
     shell.setPipelineResult(result);

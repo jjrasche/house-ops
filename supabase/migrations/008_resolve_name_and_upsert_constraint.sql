@@ -9,6 +9,8 @@ alter table resolution_context_rules
 
 -- Extend resolve_entity_fuzzy to return the surface_form as entity_name.
 -- Callers can display "milk (item)" instead of "item(#1)".
+-- Must drop first because return type changed (added entity_name column).
+drop function if exists resolve_entity_fuzzy(bigint, text, real);
 create or replace function resolve_entity_fuzzy(
   p_household_id bigint,
   p_mention text,

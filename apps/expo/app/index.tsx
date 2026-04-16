@@ -1,7 +1,7 @@
 import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useCallback, useEffect, useMemo, type ReactNode } from "react";
-import type { EntityType } from "@house-ops/core";
-import { createEntity, runPipeline } from "@house-ops/core";
+import type { EntityType, Observation } from "@house-ops/core";
+import { createEntity, runPipeline, subscribeObservations } from "@house-ops/core";
 import { renderSpec, useSourceData, type RenderContext } from "@factoredui/react";
 import { createComponentRegistry, type ThemeTokens } from "@factoredui/react-native";
 import type { Spec } from "@factoredui/core";
@@ -37,6 +37,14 @@ export default function ShellScreen() {
     lexiconState.refreshToolCallExamples();
     refreshSources();
   }, [isAuthenticated, lexiconState.refreshLexicon, lexiconState.refreshToolCallExamples, refreshSources]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const handleObservation = (observation: Observation) => {
+      console.log("[agent] observation received:", observation.trigger_type, observation.device_id);
+    };
+    return subscribeObservations(supabase, handleObservation);
+  }, [isAuthenticated]);
 
   const shellContext = useMemo(
     () => buildShellContext({

@@ -7,8 +7,8 @@ import { Provider } from "@factoredui/react";
 import type { CaptureAdapter } from "@factoredui/core";
 import { createSupabaseStore } from "@factoredui/adapter-supabase";
 import { createRnAdapter } from "@factoredui/react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
+import { asyncKV } from "../src/factoredui/storage";
 
 const store = createSupabaseStore(supabase);
 const platform = Platform.OS === "ios" ? "ios" as const : "android" as const;
@@ -17,7 +17,7 @@ export default function RootLayout() {
   const [adapter, setAdapter] = useState<CaptureAdapter | null>(null);
 
   useEffect(() => {
-    createRnAdapter(AsyncStorage).then(setAdapter);
+    createRnAdapter({ storage: asyncKV, captureErrors: true }).then(setAdapter);
   }, []);
 
   if (!adapter) return null;
