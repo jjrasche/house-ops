@@ -21,7 +21,7 @@ function createNativeService(): WakeWordService {
   const { PorcupineManager, BuiltInKeywords } =
     require('@picovoice/porcupine-react-native') as typeof import('@picovoice/porcupine-react-native');
 
-  let manager: InstanceType<typeof PorcupineManager> | null = null;
+  let manager: Awaited<ReturnType<typeof PorcupineManager.fromBuiltInKeywords>> | null = null;
 
   return {
     async start(onDetected) {
