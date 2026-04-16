@@ -1,4 +1,8 @@
 import { defineConfig } from "vitest/config";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const rnTestingPath = require.resolve("@factoredui/react-native/testing");
 
 export default defineConfig({
   test: {
@@ -13,7 +17,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "react-native": "react-native-web",
+      "react-native": rnTestingPath,
     },
   },
 });
