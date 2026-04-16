@@ -8,9 +8,10 @@ COPY apps/expo/ apps/expo/
 ARG EXPO_PUBLIC_SUPABASE_URL
 ARG EXPO_PUBLIC_SUPABASE_ANON_KEY
 
-# CI requires @factoredui packages published to npm (^0.5.0).
-# Local file: links in package.json must be replaced before deploy.
-RUN npm ci --workspace=@house-ops/core --workspace=@house-ops/mobile --include-workspace-root
+# Swap file: links to npm registry versions for CI builds.
+# Local dev uses file: links to workspace/factored-ui/ for instant iteration.
+RUN sed -i 's|"file:[^"]*adapter-supabase"|"^0.5.0"|; s|"file:[^"]*core"|"^0.5.0"|; s|"file:[^"]*react-native"|"^0.5.0"|; s|"file:[^"]*react"|"^0.5.0"|' apps/expo/package.json
+RUN npm install --workspace=@house-ops/core --workspace=@house-ops/mobile --include-workspace-root
 RUN cd apps/expo && npx expo export --platform web
 
 FROM caddy:2-alpine
