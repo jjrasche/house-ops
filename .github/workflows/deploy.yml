@@ -6,6 +6,8 @@ on:
     paths:
       - "apps/expo/**"
       - "packages/core/**"
+      - "Dockerfile"
+      - ".dockerignore"
 
 jobs:
   build-and-push:
