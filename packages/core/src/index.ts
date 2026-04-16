@@ -17,6 +17,8 @@ export { subscribeObservations } from './agent/subscribe-observations';
 export { writeAction } from './agent/write-action';
 export { handleAutomationIntent } from './agent/handle-intent';
 export { matchBedtimeIntent, buildBedtimeActions } from './agent/rules/bedtime';
+export { matchPreheatIntent, buildPreheatActions } from './agent/rules/preheat';
+export { searchClaims, extractSearchKeywords } from './agent/query-claims';
 
 // Types
 export type {
@@ -55,3 +57,5 @@ export type {
 } from './agent/types';
 export type { WriteActionResult } from './agent/write-action';
 export type { IntentResult } from './agent/handle-intent';
+export type { PreheatParams } from './agent/rules/preheat';
+export type { MemoryClaim, ClaimQueryResult } from './agent/query-claims';
