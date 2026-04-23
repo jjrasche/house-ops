@@ -7,5 +7,8 @@
   "scripts": {
     "test": "npm test --workspace=@house-ops/mobile"
   },
-  "overrides": {}
+  "overrides": {},
+  "dependencies": {
+    "react-native-worklets": "^0.7.4"
+  }
 }
